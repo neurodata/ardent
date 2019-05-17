@@ -14,8 +14,8 @@ with open('README.md', 'r') as readmeFile:
 def check_python_version():
     """Exit when the Python version is too low."""
     if sys.version_info < MINIMUM_PYTHON_VERSION:
-        raise SystemExit(f"Python {MINIMUM_PYTHON_VERSION[0]}.{MINIMUM_PYTHON_VERSION[1] is required. \
-            You are running Python {sys.version_info[0]}.{sys.version_info[1]}.")
+        raise SystemExit((f"Python {MINIMUM_PYTHON_VERSION[0]}.{MINIMUM_PYTHON_VERSION[1] is required."
+            f"\nYou are running Python {sys.version_info[0]}.{sys.version_info[1]}."))
 check_python_version()
 
 setup(
