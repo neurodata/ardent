@@ -21,5 +21,5 @@ __min_python_version__ = (3, 6)
 __required_packages__ = [
     'numpy',
     'pathlib',
-    'pytorch',
+    'torch',
 ]
