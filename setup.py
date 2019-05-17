@@ -4,7 +4,7 @@ from pathlib import Path
 
 # Variables defined in __version__.py.
 version_info = {}
-with open(Path(__file__) / '__version__.py', 'r') as versionFile:
+with open(Path(__file__).parent / '__version__.py', 'r') as versionFile:
     exec(versionFile.read(), version_info)
 
 # Text contained in README.md.
