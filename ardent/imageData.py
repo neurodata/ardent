@@ -29,6 +29,22 @@ class ImageMetaData():
         # Populate attributes.
 
         # nxyz attribute.
+        self.nxyz = ImageMetaData._validate_nxyz(nxyz, image)
+
+        # dxyz attribute.
+        self.dxyz = ImageMetaData._validate_dxyz(dxyz, self.nxyz)
+
+        # xyz attribute.
+        self.xyz = ImageMetaData._generate_xyz(dxyz, nxyz, origin)
+
+        # name attribute.
+        self.name = name
+
+
+    @staticmethod
+    def _validate_nxyz(nxyz, image) -> np.ndarray:
+        """Validate compatibility between nxyz and image as provided, 
+        and return an appropriate value for the nxyz attribute."""
 
         # Validate agreement between nxyz and image.
         if nxyz is not None and image is not None:
@@ -49,7 +65,7 @@ nxyz: {nxyz}, image.shape: {image.shape}.")
                 nxyz = np.array([nxyz])
             # If nxyz is 1-dimensional, set nxyz attribute.
             if nxyz.ndim == 1:
-                self.nxyz = nxyz
+                return nxyz
         # If image is provided but nxyz is not.
         # Will fail if image cannot be cast as a np.ndarray.
         elif image is not None:
@@ -60,11 +76,15 @@ nxyz: {nxyz}, image.shape: {image.shape}.")
             if image.ndim == 0:
                 image = np.array([image])
             # image is a non-zero-dimensional np.ndarray. Set nxyz attribute.
-            self.nxyz = np.array(image.shape)
+            return np.array(image.shape)
         else:
             raise RuntimeError(f"At least one of nxyz and image must be provided. Both were received as their default value: None.")
         
-        # dxyz attribute.
+    
+    @staticmethod
+    def _validate_dxyz(dxyz, nxyz:np.ndarray) -> np.ndarray:
+        """Validate dxyz and its compatibility with nxyz. 
+        Return an appropriate value for the dxyz attribute."""
 
         # Cast as np.ndarray.
         if not isinstance(dxyz, np.ndarray):
@@ -72,40 +92,34 @@ nxyz: {nxyz}, image.shape: {image.shape}.")
         # if dxyz is multidimensional, raise error.
         if dxyz.ndim > 1:
             raise ValueError(f"dyxz must be 1-dimensional. The value provided is {dxyz.ndim}-dimensional.")
-        # If dxyz is 0-dimensional, upcast to match the length of self.nxyz.
+        # If dxyz is 0-dimensional, upcast to match the length of nxyz.
         if dxyz.ndim == 0:
-            dxyz = np.array([dxyz]*len(self.nxyz))
+            dxyz = np.array([dxyz]*len(nxyz))
         # dxyz is 1-dimensional.
-        # If dxyz is 1-dimensional and matches the length of self.nxyz, set dxyz attribute.
-        if len(dxyz) == len(self.nxyz):
-            self.dxyz = dxyz
+        if len(dxyz) == len(nxyz):
+            # dxyz is 1-dimensional and matches the length of nxyz. Set dxyz attribute.
+            return dxyz
         else:
-            raise ValueError(f"dyxz must be either 0-dimensional or 1-dimensional and matching the length of nxyz or the shape of image.\n\
-len(dxyz): {len(dxyz)}.")
-        
-        # xyz attribute.
-
-        # Upcast self.dxyz with nxyz if possible.
-        if self.dxyz.ndim == 0:
-            self.dxyz = np.array([self.dxyz]*len(self.nxyz))
-        
-        # Verify that the lengths of self.dxyz and self.nxyz match.
-        if len(self.dxyz) != len(self.nxyz):
-            raise ValueError(f"dxyz must either be a scalar or match the length of nxyz or the shape of image.\n\
+            raise ValueError(f"dyxz must be either 0-dimensional or 1-dimensional and match the length of nxyz or the shape of image.\n\
 len(dxyz): {len(dxyz)}.")
 
-        # Instantiate self.xyz.
-        # self.xyz is a list of np.ndarray objects of type float and represents the physical coordinates in each dimension.
-        self.xyz = [np.arange(nxyz_i).astype(float)*dxyz_i for nxyz_i, dxyz_i in zip(self.nxyz, self.dxyz)]
+
+    @staticmethod
+    def _generate_xyz(dxyz:np.ndarray, nxyz:np.ndarray, origin) -> np.ndarray:
+        """Generate image coordinates xyz based on the resolution <dxyz>, the shape <nxyz>, and the center designation <origin>."""
+
+        # Instantiate xyz.
+        # xyz is a list of np.ndarray objects of type float and represents the physical coordinates in each dimension.
+        xyz = [np.arange(nxyz_i).astype(float)*dxyz_i for nxyz_i, dxyz_i in zip(nxyz, dxyz)]
         
-        # Shift self.xyz.
-        # The default choice is to center self.xyz.
+        # Shift xyz.
         if isinstance(origin, str):
-            if origin == "center": # Default.
+            if origin == "center":
                 # Offset by the mean along each dimension.
-                for coords in self.xyz:
+                for coords in xyz:
                     coords -= np.mean(coords)
             elif origin == "zero":
+                # This designation is how xyz was initially created and thus it requires no shift.
                 pass
             else:
                 raise ValueError(f"Unsupported value for origin. Supported string values include ['center', 'zero'].\n\
@@ -115,12 +129,12 @@ origin: {origin}.")
                 # Cast to np.ndarray.
                 origin = np.array(origin)
             # origin is a np.ndarray.
-            # If origin has length 1, broadcast to match self.nxyz.
+            # If origin has length 1, broadcast to match nxyz.
             if origin.ndim == 0:
-                origin = np.array(list(origin) * len(self.nxyz))
-            # If the length of origin matches the length of self.nxyz, perform offset in each dimension.
-            if len(origin) == len(self.nxyz):
-                for dim, coords in enumerate(self.xyz):
+                origin = np.array(list(origin) * len(nxyz))
+            # If the length of origin matches the length of nxyz, perform offset in each dimension.
+            if len(origin) == len(nxyz):
+                for dim, coords in enumerate(xyz):
                     coords -= origin[dim]
             else:
                 raise ValueError(f"origin must either be a scalar, have length 1, or match the length of nxyz or the shape of image.\n\
@@ -129,9 +143,8 @@ len(origin): {len(origin)}.")
             raise ValueError(f"must be one of the following types: [str, int, float, list, np.ndarray].\n\
 type(origin): {type(origin)}.")
 
-        # name attribute.
-
-        self.name = name
+        # xyz has been created from dxyz and nxyz, and then adjusted appropriately based on origin.
+        return xyz
 
 
 class Image(ImageMetaData):
