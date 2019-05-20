@@ -15,11 +15,18 @@ __url__ = "https://github.com/neurodata/ardent"
 __version__ = "0.0.1"
 __author__ = "Devin Crowley"
 __author_email__ = "devin.g.crowley@gmail.com"
-__license__ = "Eclipse Public License 2.0"
+__license__ = "Apache License 2.0"
 __copyright__ = "Copyright 2019 Devin Crowley"
 __min_python_version__ = (3, 6)
-__required_packages__ = [
-    'numpy',
-    'pathlib',
-    'torch',
+# Requirements defined in requirements.txt.
+with open(Path(__file__).parent / 'requirements.txt', 'r') as requirementsFile:
+    __required_packages__ = requirementsFile.readlines()
+__classifiers__ = [
+    "Development Status :: 1 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
 ]
