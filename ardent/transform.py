@@ -2,7 +2,7 @@
 
 # import statements.
 import numpy as np
-import torch_lddmm_wrapper
+from lddmm import torch_lddmm_wrapper as torch_lddmm_wrapper
 
 class Transform():
     """transform stores the deformation that is output by a registration 
