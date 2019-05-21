@@ -2,13 +2,6 @@ import sys
 from setuptools import setup, find_packages
 from pathlib import Path
 
-def check_python_version():
-    """Raises SystemExit when the Python version is too low."""
-    if sys.version_info < version_info['__min_python_version__']:
-        raise SystemExit((f"Python >= {version_info['__min_python_version__'][0]}.{version_info['__min_python_version__'][1]} is required."
-            f"\nYou are running Python {sys.version_info[0]}.{sys.version_info[1]}."))
-check_python_version()
-
 # Variables defined in __version__.py.
 version_info = {}
 with open(Path(__file__).parent / 'ardent/__version__.py', 'r') as versionFile:
@@ -17,6 +10,13 @@ with open(Path(__file__).parent / 'ardent/__version__.py', 'r') as versionFile:
 # Descriptive text contained in README.md.
 with open('README.md', 'r') as readmeFile:
     README = readmeFile.read()
+
+def check_python_version():
+    """Raises SystemExit when the Python version is too low."""
+    if sys.version_info < version_info['__min_python_version__']:
+        raise SystemExit((f"Python >= {version_info['__min_python_version__'][0]}.{version_info['__min_python_version__'][1]} is required."
+            f"\nYou are running Python {sys.version_info[0]}.{sys.version_info[1]}."))
+check_python_version()
 
 setup(
     name=version_info['__title__'],
