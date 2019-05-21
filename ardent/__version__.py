@@ -9,6 +9,8 @@ r"""
 
 """
 
+from pathlib import Path
+
 __title__ = "ardent"
 __description__ = "A tool for image registration."
 __url__ = "https://github.com/neurodata/ardent"
@@ -19,7 +21,7 @@ __license__ = "Apache License 2.0"
 __copyright__ = "Copyright 2019 Devin Crowley"
 __min_python_version__ = (3, 6)
 # Requirements defined in requirements.txt.
-with open(Path(__file__).parent / 'requirements.txt', 'r') as requirementsFile:
+with open(Path(__file__).parent.parent / 'requirements.txt', 'r') as requirementsFile:
     __required_packages__ = requirementsFile.readlines()
 __classifiers__ = [
     "Development Status :: 1 - Alpha",
