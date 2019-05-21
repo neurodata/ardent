@@ -50,13 +50,13 @@ def torch_register(template, target, sigmaR, eV, eL=0, eT=0, **kwargs):
     arguments.update(kwargs)
 
     # Instantiate LDDMM object and run registration.
-    lddmm = torch_lddmm.LDDMM(arguments)
+    lddmm = torch_lddmm.LDDMM(**arguments)
     lddmm.run()
 
     # Assemble outputs.
 
     # lddmm.computeThisDisplacement() returns phiinvAinvs - (X0, X1, X2).
-    X012 = np.array(list(map(lambda t: t.numpy(), [lddmm.X0, lddmm.X1, lddmm.X2])))
+    X012 = np.array(list(map(lambda t: t.cpu().numpy(), [lddmm.X0, lddmm.X1, lddmm.X2])))
     phiinvAinvs = np.array(lddmm.computeThisDisplacement()) + X012 # Elment-wise addition.
 
     affineA = lddmm.affineA # Preserve lddmm.affineA.
@@ -67,6 +67,10 @@ def torch_register(template, target, sigmaR, eV, eL=0, eT=0, **kwargs):
     lddmm.vt1 = [-t for t in lddmm.vt1[::-1]]
     lddmm.vt2 = [-t for t in lddmm.vt2[::-1]]
     phi0, phi1, phi2 = lddmm.computeThisDisplacement() + X012 # Element-wise addition.
+    # Restore the order and parity of the vt012 tensor-lists.
+    lddmm.vt0 = [-t for t in lddmm.vt0[::-1]]
+    lddmm.vt1 = [-t for t in lddmm.vt1[::-1]]
+    lddmm.vt2 = [-t for t in lddmm.vt2[::-1]]
     lddmm.affineA = affineA # Restore lddmm.affineA.
 
     Aphi0 = lddmm.affineA[0,0]*phi0 + lddmm.affineA[0,1]*phi1 + lddmm.affineA[0,2]*phi2 + lddmm.affineA[0,3]
@@ -109,4 +113,4 @@ def torch_apply_transform(image:np.ndarray, deform_to='template', Aphis=None, ph
     # line copied from torch_lddmm.py, last line before return of def applyThisTransformation().
     deformed_image = torch.squeeze(torch.nn.functional.grid_sample(image.unsqueeze(0).unsqueeze(0),torch.stack((transformArray2.type(dtype).to(device=lddmm.params['cuda'])/(lddmm.nx[2]*lddmm.dx[2]-lddmm.dx[2])*2-1,transformArray1.type(dtype).to(device=lddmm.params['cuda'])/(lddmm.nx[1]*lddmm.dx[1]-lddmm.dx[1])*2-1,transformArray0.type(dtype).to(device=lddmm.params['cuda'])/(lddmm.nx[0]*lddmm.dx[0]-lddmm.dx[0])*2-1),dim=3).unsqueeze(0),padding_mode='border',mode='bilinear'))
 
-    return deformed_image.numpy()
+    return deformed_image.cpu().numpy()
