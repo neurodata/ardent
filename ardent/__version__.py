@@ -9,6 +9,8 @@ r"""
 
 """
 
+# This file is read by setup.py and executed as a string.
+
 __title__ = "ardent"
 __description__ = "A tool for image registration."
 __url__ = "https://github.com/neurodata/ardent"
