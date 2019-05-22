@@ -4,7 +4,7 @@
 
 import numpy as np
 import torch
-from torch_lddmm_stable import LDDMM
+from .torch_lddmm_stable import LDDMM
 
 # This proto lddmm function should provide similar IO to the ultimately desired version.
 def torch_register(template, target, sigmaR, eV, eL=0, eT=0, **kwargs):
@@ -50,7 +50,7 @@ def torch_register(template, target, sigmaR, eV, eL=0, eT=0, **kwargs):
     arguments.update(kwargs)
 
     # Instantiate LDDMM object and run registration.
-    lddmm = torch_lddmm.LDDMM(**arguments)
+    lddmm = LDDMM(**arguments)
     lddmm.run()
 
     # Assemble outputs.
