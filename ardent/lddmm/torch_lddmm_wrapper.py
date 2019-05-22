@@ -20,6 +20,9 @@ def torch_register(template, target, sigmaR, eV, eL=0, eT=0, **kwargs):
     outdir -> ['.'] output directory path
    """
 
+    # Adjust template and target to match in shape.
+    template, target = _pad_to_same_shape(template, target)
+
     # Set defaults.
     arguments = {
         'template':template, # atlas file name
@@ -114,3 +117,42 @@ def torch_apply_transform(image:np.ndarray, deform_to='template', Aphis=None, ph
     deformed_image = torch.squeeze(torch.nn.functional.grid_sample(image.unsqueeze(0).unsqueeze(0),torch.stack((transformArray2.type(dtype).to(device=lddmm.params['cuda'])/(lddmm.nx[2]*lddmm.dx[2]-lddmm.dx[2])*2-1,transformArray1.type(dtype).to(device=lddmm.params['cuda'])/(lddmm.nx[1]*lddmm.dx[1]-lddmm.dx[1])*2-1,transformArray0.type(dtype).to(device=lddmm.params['cuda'])/(lddmm.nx[0]*lddmm.dx[0]-lddmm.dx[0])*2-1),dim=3).unsqueeze(0),padding_mode='border',mode='bilinear'))
 
     return deformed_image.cpu().numpy()
+
+def _pad_to_same_shape(template, target, pad_value=0):
+    """Return a tuple containing copies of template and target 
+    that are padded to match the larger of the two shapes in each dimension."""
+
+    # Break alias.
+    template = np.copy(template)
+    target = np.copy(target)
+
+    # Verify template and target have the same number of dimensions.
+    if template.ndim != target.ndim:
+        raise ValueError((f"template and target must have the same number of dimensions.\n"
+            f"template.ndim: {template.ndim}, target.ndim: {target.ndim}."))
+
+    # Pad.
+    for dim, (template_dim_length, target_dim_length) in enumerate(zip(template.shape, target.shape)):
+        # Apply pad to the array with the lesser length along each dimension.
+
+        if template_dim_length == target_dim_length:
+            continue
+        # template and target have different lengths along this dimension.
+        
+        # Apply half the padding on each side.
+        # If the difference is odd, apply an extra layer on the far side of that dimension.
+        dim_length_difference = abs(template_dim_length - target_dim_length)
+        pad_size = dim_length_difference // 2
+        odd_difference_correction = dim_length_difference % 2
+
+        pad_shape = np.full([template.ndim, 2], 0)
+        pad_shape[dim] = (pad_size, pad_size + odd_difference_correction) # Additional padding at end of dimension.
+
+        if template_dim_length < target_dim_length:
+            # template is shorter along this dimension and should be padded.
+            template = np.pad(template, pad_width=pad_shape, mode='constant', constant_values=pad_value)
+        else:
+            # target is shorter along this dimension and should be padded.
+            target = np.pad(target, pad_width=pad_shape, mode='constant', constant_values=pad_value)
+    
+    return template, target
