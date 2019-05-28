@@ -49,8 +49,8 @@ class ImageMetaData():
         # Validate agreement between nxyz and image.
         if nxyz is not None and image is not None:
             if not all(nxyz == np.array(image).shape):
-                raise ValueError((f"nxyz and image were both provided, but nxyz does not match the shape of image."
-                    f"\nnxyz: {nxyz}, image.shape: {image.shape}."))
+                raise ValueError(f"nxyz and image were both provided, but nxyz does not match the shape of image."
+                    f"\nnxyz: {nxyz}, image.shape: {image.shape}.")
 
         # If nxyz is provided but image is not.
         if nxyz is not None:
@@ -100,8 +100,8 @@ class ImageMetaData():
             # dxyz is 1-dimensional and matches the length of nxyz. Set dxyz attribute.
             return dxyz
         else:
-            raise ValueError((f"dyxz must be either 0-dimensional or 1-dimensional and match the length of nxyz or the shape of image."
-                f"\nlen(dxyz): {len(dxyz)}."))
+            raise ValueError(f"dyxz must be either 0-dimensional or 1-dimensional and match the length of nxyz or the shape of image."
+                f"\nlen(dxyz): {len(dxyz)}.")
 
 
     @staticmethod
@@ -122,8 +122,8 @@ class ImageMetaData():
                 # This designation is how xyz was initially created and thus it requires no shift.
                 pass
             else:
-                raise ValueError((f"Unsupported value for origin. Supported string values include ['center', 'zero']."
-                    f"\norigin: {origin}."))
+                raise ValueError(f"Unsupported value for origin. Supported string values include ['center', 'zero']."
+                    f"\norigin: {origin}.")
         elif isinstance(origin, (int, float, list, np.ndarray)):
             if isinstance(origin, (int, float, list)):
                 # Cast to np.ndarray.
@@ -137,11 +137,11 @@ class ImageMetaData():
                 for dim, coords in enumerate(xyz):
                     coords -= origin[dim]
             else:
-                raise ValueError((f"origin must either be a scalar, have length 1, or match the length of nxyz or the shape of image."
-                    f"\nlen(origin): {len(origin)}."))
+                raise ValueError(f"origin must either be a scalar, have length 1, or match the length of nxyz or the shape of image."
+                    f"\nlen(origin): {len(origin)}.")
         else:
-            raise ValueError((f"must be one of the following types: [str, int, float, list, np.ndarray]."
-                f"\ntype(origin): {type(origin)}."))
+            raise ValueError(f"must be one of the following types: [str, int, float, list, np.ndarray]."
+                f"\ntype(origin): {type(origin)}.")
 
         # xyz has been created from dxyz and nxyz, and then adjusted appropriately based on origin.
         return xyz
