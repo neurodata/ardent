@@ -100,6 +100,8 @@ def torch_apply_transform(image:np.ndarray, deform_to='template', Aphis=None, ph
     if lddmm is None:
         raise RuntimeError("lddmm must be provided with present implementation.")
 
+    dtype = 'torch.FloatTensor'
+
     # Convert image from np.ndarray to torch.Tensor.
     image = torch.tensor(image).type(dtype).to(device=lddmm.params['cuda']) # Side-effect: breaks alias.
 
