@@ -37,7 +37,7 @@ def torch_register(template, target, sigmaR, eV, eL=0, eT=0, **kwargs):
         'sigma':1.0, # sigmaM
         'sigmaR':sigmaR, # sigmaR
         'nt':5, # number of time steps in velocity field
-        'do_affine':0, # 0 = False
+        'do_affine':1, # 0 = False
         'checkaffinestep':0, # 0 = False
         'im_norm_ms':0, # 0 = False
         'gpu_number':0, # index of CUDA_VISIBLE_DEVICES to use, or None to use CPU
