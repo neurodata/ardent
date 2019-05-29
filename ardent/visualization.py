@@ -148,7 +148,7 @@ def _Image_to_Nifti2Image(image, affine=None):
     return nifti2image
 
 
-def _get_cuts(data, xcuts, ycuts, zcuts, ncuts=5, interesting_cuts=False):
+def _get_cuts(data, xcuts, ycuts, zcuts, n_cuts=5, interesting_cuts=False):
     """Returns xcuts, ycuts, & zcuts. If any of these are provided, they are used. 
     If any are not provided, they are computed. 
     
@@ -163,14 +163,14 @@ def _get_cuts(data, xcuts, ycuts, zcuts, ncuts=5, interesting_cuts=False):
         ycuts = ycuts or niplot.find_cut_slices(Image_to_Nifti2Image(atlas_Image, affine=np.eye(4)), direction='y', n_cuts=n_cuts).astype(int)
         zcuts = zcuts or niplot.find_cut_slices(Image_to_Nifti2Image(atlas_Image, affine=np.eye(4)), direction='z', n_cuts=n_cuts).astype(int)
     else:
-        xcuts = xcuts or np.linspace(0, data.shape[0], ncuts + 2)[1:-1]
-        ycuts = ycuts or np.linspace(0, data.shape[1], ncuts + 2)[1:-1]
-        zcuts = zcuts or np.linspace(0, data.shape[2], ncuts + 2)[1:-1]
+        xcuts = xcuts or np.linspace(0, data.shape[0], n_cuts + 2)[1:-1]
+        ycuts = ycuts or np.linspace(0, data.shape[1], n_cuts + 2)[1:-1]
+        zcuts = zcuts or np.linspace(0, data.shape[2], n_cuts + 2)[1:-1]
     
     return xcuts, ycuts, zcuts
 
 # TODO: verify plotting works with xyzcuts provided with inconsistent lengths.
-# TODO: allow ncuts to be a triple.
+# TODO: allow n_cuts to be a triple.
 def heatslices(data, title=None, n_cuts=5, xcuts=[], ycuts=[], zcuts=[], figsize=(10, 5)):
 
     # TODO: find a cleaner way to do this.
@@ -183,7 +183,7 @@ def heatslices(data, title=None, n_cuts=5, xcuts=[], ycuts=[], zcuts=[], figsize
     data = _scale_data(data, clip_mode='stdev', stdevs=4) # Side-effect: breaks alias.
     
     # Get cuts.
-    xcuts, ycuts, zcuts = _get_cuts(data, xcuts, ycuts, zcuts, ncuts)
+    xcuts, ycuts, zcuts = _get_cuts(data, xcuts, ycuts, zcuts, n_cuts)
     
     # maxcuts is the number of cuts in the dimension with the largest number of cuts.
     maxcuts = max(list(map(lambda cuts: len(cuts), [xcuts, ycuts, zcuts])))
