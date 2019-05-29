@@ -84,8 +84,7 @@ def _scale_data(data, clip_mode=None, stdevs=4, quantile=0.01, limits=None):
     # Create a clipped view of data and scale data based on it.
     clipped_data = data[(data - lower_lim >= 0) & (data - upper_lim <= 0)]
     data = data - np.min(clipped_data)
-    data = data / np.max(clipped_data)
-
+    data = data / (np.max(clipped_data) - np.min(clipped_data))
     # Return scaled copy of data.
     return data
 
