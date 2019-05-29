@@ -162,3 +162,8 @@ def _pad_to_same_shape(template, target, pad_value=0):
             target = np.pad(target, pad_width=pad_shape, mode='constant', constant_values=pad_value)
     
     return template, target
+
+
+def torch_apply_transform_daniel():
+    ''' daniel's version to be replaced later '''
+    pass
