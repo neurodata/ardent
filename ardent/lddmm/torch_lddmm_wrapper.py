@@ -62,6 +62,10 @@ def torch_register(template, target, sigmaR, eV, eL=0, eT=0, **kwargs):
     X012 = np.array(list(map(lambda t: t.cpu().numpy(), [lddmm.X0, lddmm.X1, lddmm.X2])))
     phiinvAinvs = np.array(lddmm.computeThisDisplacement()) + X012 # Elment-wise addition.
 
+    # Instantiate lddmm.affineA to identity Tensor if do_affine == 0.
+    if not hasattr(lddmm, 'affineA'):
+        lddmm.affineA = torch.tensor(np.eye(4)).type(lddmm.params['dtype']).to(device=lddmm.params['cuda'])
+
     affineA = lddmm.affineA # Preserve lddmm.affineA.
     lddmm.affineA = torch.tensor(np.eye(4)).type(lddmm.params['dtype']).to(device=lddmm.params['cuda']) # Set lddmm.affineA to identity.
     phiinvs = lddmm.computeThisDisplacement() + X012 # Element-wise addition.
@@ -76,9 +80,9 @@ def torch_register(template, target, sigmaR, eV, eL=0, eT=0, **kwargs):
     lddmm.vt2 = [-t for t in lddmm.vt2[::-1]]
     lddmm.affineA = affineA # Restore lddmm.affineA.
 
-    Aphi0 = lddmm.affineA[0,0]*phi0 + lddmm.affineA[0,1]*phi1 + lddmm.affineA[0,2]*phi2 + lddmm.affineA[0,3]
-    Aphi1 = lddmm.affineA[1,0]*phi0 + lddmm.affineA[1,1]*phi1 + lddmm.affineA[1,2]*phi2 + lddmm.affineA[1,3]
-    Aphi2 = lddmm.affineA[2,0]*phi0 + lddmm.affineA[2,1]*phi1 + lddmm.affineA[2,2]*phi2 + lddmm.affineA[2,3]
+    Aphi0 = lddmm.affineA.cpu().numpy()[0,0]*phi0 + lddmm.affineA.cpu().numpy()[0,1]*phi1 + lddmm.affineA.cpu().numpy()[0,2]*phi2 + lddmm.affineA.cpu().numpy()[0,3]
+    Aphi1 = lddmm.affineA.cpu().numpy()[1,0]*phi0 + lddmm.affineA.cpu().numpy()[1,1]*phi1 + lddmm.affineA.cpu().numpy()[1,2]*phi2 + lddmm.affineA.cpu().numpy()[1,3]
+    Aphi2 = lddmm.affineA.cpu().numpy()[2,0]*phi0 + lddmm.affineA.cpu().numpy()[2,1]*phi1 + lddmm.affineA.cpu().numpy()[2,2]*phi2 + lddmm.affineA.cpu().numpy()[2,3]
 
     # Not presently included: Ainv.
     return {
