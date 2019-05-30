@@ -83,6 +83,7 @@ def _scale_data(data, limit_mode=None, stdevs=4, quantile=0.01, limits=None):
                 f"limit_mode: {limit_mode}.")
     # lower_lim and upper_lim are set appropriately.
 
+    # TODO: make harmonious with quantiles approach so that it centers at the median.
     # Scale data such that the bulk lies approximately on [0, 1].
     scaled_data = (data - lower_lim) / (upper_lim - lower_lim)
     
@@ -172,9 +173,10 @@ def _get_cuts(data, xcuts, ycuts, zcuts, n_cuts=5, interesting_cuts=False):
 
 # TODO: verify plotting works with xyzcuts provided with inconsistent lengths.
 # TODO: allow n_cuts to be a triple.
-def heatslices(data, n_cuts=5, xcuts=[], ycuts=[], zcuts=[], # What will be displayed.
+def heatslices(data, 
     title=None, figsize=(10, 5), cmap='gray', # Figure-tuning arguments.
-    limit_mode=None, stdevs=4, quantile=0.01, limits=None): # data-scaling arguments.
+    n_cuts=5, xcuts=[], ycuts=[], zcuts=[], # What will be displayed.
+    limit_mode=None, stdevs=4, quantile=0.01, limits=None, vmin=0, vmax=1): # data-scaling arguments.
     """Produces a figure with 3 rows of images, each row corresponding to a different orthogonal view of <data>.
     Each row has potentially multiple parallel views.
     The data is scaled such that the bulk lies on the interval [0, 1], with the extrema optionally left 
@@ -205,7 +207,7 @@ def heatslices(data, n_cuts=5, xcuts=[], ycuts=[], zcuts=[], # What will be disp
     for row, cuts in enumerate([xcuts, ycuts, zcuts]):
         for col, cut in enumerate(cuts):
             axs[row, col].grid(False)
-            img = axs[row, col].imshow(data.take(cut, row), vmin=0, vmax=1, cmap=cmap)
+            img = axs[row, col].imshow(data.take(cut, row), vmin=vmin, vmax=vmax, cmap=cmap)
     cax = plt.axes([0.925, 0.1, 0.025, 0.77])
     plt.colorbar(img, cax=cax)
     fig.suptitle(title, fontsize=20)
