@@ -124,7 +124,7 @@ def torch_apply_transform(image:np.ndarray, deform_to='template', Aphis=None, ph
 
     return deformed_image.cpu().numpy()
 
-def _pad_to_same_shape(template, target, pad_value=0):
+def _pad_to_same_shape(template, target):
     """Return a tuple containing copies of template and target 
     that are padded to match the larger of the two shapes in each dimension."""
 
@@ -156,9 +156,9 @@ def _pad_to_same_shape(template, target, pad_value=0):
 
         if template_dim_length < target_dim_length:
             # template is shorter along this dimension and should be padded.
-            template = np.pad(template, pad_width=pad_shape, mode='constant', constant_values=pad_value)
+            template = np.pad(template, pad_width=pad_shape, mode='edge')
         else:
             # target is shorter along this dimension and should be padded.
-            target = np.pad(target, pad_width=pad_shape, mode='constant', constant_values=pad_value)
+            target = np.pad(target, pad_width=pad_shape, mode='edge')
     
     return template, target
