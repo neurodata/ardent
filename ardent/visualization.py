@@ -3,19 +3,19 @@ import matplotlib.pyplot as plt
 import nibabel as nib
 import nilearn.plotting as niplot
 
-def _scale_data(data, clip_mode=None, stdevs=4, quantile=0.01, limits=None):
+def _scale_data(data, limit_mode=None, stdevs=4, quantile=0.01, limits=None):
     """Returns a copy of data scaled such that the bulk of the values are mapped to the range [0, 1].
     
-    Upper and lower limits are chosen based on clip_mode and other arguments.
+    Upper and lower limits are chosen based on limit_mode and other arguments.
     These limits are the anchors by which <data> is scaled such that after scaling,
     they lie on either end of the range [0, 1].
 
-    supported clip_mode values:
+    supported limit_mode values:
     - 'valid mode' | related_kwarg [default kwarg value] --> description
     - 'stdev' | stdevs [4] --> limits are the mean +/- <stdevs> standard deviations
     - 'quantile' | quantile [0.05] --> limits are the <quantile> and 1 - <quantile> quantiles
 
-    If <limits> is provided as a 2-element iterable, it will override clip_mode 
+    If <limits> is provided as a 2-element iterable, it will override limit_mode 
     and be used directly as the anchoring limits:
     <limits> = (lower, upper)."""
 
@@ -23,70 +23,72 @@ def _scale_data(data, clip_mode=None, stdevs=4, quantile=0.01, limits=None):
     if not isinstance(data, np.ndarray):
         raise TypeError(f"data must be of type np.ndarray.\ntype(data): {type(data)}.")
 
-    # Copy data.
-    data = np.copy(data)
-
     # Determine scaling limits.
 
     if limits is not None:
-        try:
-            if len(limits) != 2:
-                raise ValueError(f"If provided, limits must have length 2.\n"
-                    f"len(limits): {len(limits)}.")
-        except TypeError:
-            # If len(limits) raises a TypeError, raise informative TypeError.
-            raise TypeError(f"If provided, limits must be a 2-element iterable.\n"
-            f"type(limits): {type(limits)}.")
-        # limits is a 2-element iterable.
+        # TODO: make <limits> validation robust.
+        if not isinstance(limits, (tuple, list, np.ndarray)):
+            raise TypeError(f"If provided, limits must be one of the following types: tuple, list, np.ndarray.\n"
+                f"type(limits): {type(limits)}.")
+        else:
+            # <limits> is a tuple, list, or np.ndarray.
+            try:
+                if len(limits) != 2:
+                    raise ValueError(f"If provided, limits must have length 2.\n"
+                        f"len(limits): {len(limits)}.")
+            except TypeError:
+                raise ValueError(f"limits was provided as a 0-dimensional np.ndarray. It must have length 2.\n"
+                    f"limits: {limits}.")
+        # <limits> is a 2-element tuple, list, or np.ndarray.
         lower_lim, upper_lim = limits
     else:
-        # limits is None. Use clip_mode to determine upper and lower limits.
-        # List supported clip_mode values.
-        supported_clip_modes = [None, 'stdev', 'quantile']
-        # Handle default None value, with no clipping.
-        if clip_mode is None:
+        # limits is None. Use limit_mode to determine upper and lower limits.
+        # List supported limit_mode values.
+        supported_limit_modes = [None, 'stdev', 'quantile']
+        # Handle default None value, with no meaningful limits.
+        if limit_mode is None:
             lower_lim = np.min(data)
             upper_lim = np.max(data)
-        # Check clip_mode type.
-        elif not isinstance(clip_mode, str):
-            raise TypeError(f"If provided, clip_mode must be a string.\ntype(clip_mode): {type(clip_mode)}.")
-        # clip_mode is a string.
+        # Check limit_mode type.
+        elif not isinstance(limit_mode, str):
+            raise TypeError(f"If provided, limit_mode must be a string.\ntype(limit_mode): {type(limit_mode)}.")
+        # limit_mode is a string.
         # Calculate limits appropriately.
-        elif clip_mode == 'stdev':
+        elif limit_mode == 'stdev':
             # Verify stdevs.
             if not isinstance(stdevs, (int, float)):
-                raise TypeError(f"For clip_mode='stdev', <stdevs> must be of type int or float.\n"
+                raise TypeError(f"For limit_mode='stdev', <stdevs> must be of type int or float.\n"
                     f"type(stdevs): {type(stdevs)}.")
             if stdevs < 0:
-                raise ValueError(f"For clip_mode='stdev', <stdevs> must be non-negative.\n"
+                raise ValueError(f"For limit_mode='stdev', <stdevs> must be non-negative.\n"
                     f"stdevs: {stdevs}.")
             # Choose limits equal to the mean +/- <stdevs> standard deviations.
             stdev = np.std(data)
             mean = np.mean(data)
             lower_lim = mean - stdevs*stdev
             upper_lim = mean + stdevs*stdev
-        elif clip_mode == 'quantile':
+        elif limit_mode == 'quantile':
             # Verify quantile.
             if not isinstance(quantile, (int, float)):
-                raise TypeError(f"For clip_mode='quantile', <quantile> must be of type int or float.\n"
+                raise TypeError(f"For limit_mode='quantile', <quantile> must be of type int or float.\n"
                     f"type(quantile): {type(quantile)}.")
             if quantile < 0 or quantile > 1:
-                raise ValueError(f"For clip_mode='quantile', <quantile> must be in the interval [0, 1].\n"
+                raise ValueError(f"For limit_mode='quantile', <quantile> must be in the interval [0, 1].\n"
                     f"quantile: {quantile}.")
-            # Choose limits based on quantiles
-            lower_lim = np.quantile(data, quantile)
-            upper_lim = np.quantile(data, 1 - quantile)
+            # Choose limits based on quantile.
+            lower_lim = np.quantile(data, min(quantile, 1 - quantile))
+            upper_lim = np.quantile(data, max(quantile, 1 - quantile))
         else:
-            raise ValueError(f"Unrecognized value for clip_mode. Supported values include {supported_clip_modes}.\n"
-                f"clip_mode: {clip_mode}.")
+            raise ValueError(f"Unrecognized value for limit_mode. Supported values include {supported_limit_modes}.\n"
+                f"limit_mode: {limit_mode}.")
     # lower_lim and upper_lim are set appropriately.
 
-    # Create a clipped view of data and scale data based on it.
-    clipped_data = data[(data - lower_lim >= 0) & (data - upper_lim <= 0)]
-    data = data - np.min(clipped_data)
-    data = data / (np.max(clipped_data) - np.min(clipped_data))
+    # TODO: make harmonious with quantiles approach so that it centers at the median.
+    # Scale data such that the bulk lies approximately on [0, 1].
+    scaled_data = (data - lower_lim) / (upper_lim - lower_lim)
+    
     # Return scaled copy of data.
-    return data
+    return scaled_data
 
 
 def _validate_inputs(data, title, n_cuts, xcuts, ycuts, zcuts, figsize):
@@ -171,16 +173,23 @@ def _get_cuts(data, xcuts, ycuts, zcuts, n_cuts=5, interesting_cuts=False):
 
 # TODO: verify plotting works with xyzcuts provided with inconsistent lengths.
 # TODO: allow n_cuts to be a triple.
-def heatslices(data, title=None, n_cuts=5, xcuts=[], ycuts=[], zcuts=[], figsize=(10, 5)):
+def heatslices(data, 
+    title=None, figsize=(10, 5), cmap='gray', # Figure-tuning arguments.
+    n_cuts=5, xcuts=[], ycuts=[], zcuts=[], # What will be displayed.
+    limit_mode=None, stdevs=4, quantile=0.01, limits=None, vmin=0, vmax=1): # data-scaling arguments.
+    """Produces a figure with 3 rows of images, each row corresponding to a different orthogonal view of <data>.
+    Each row has potentially multiple parallel views.
+    The data is scaled such that the bulk lies on the interval [0, 1], with the extrema optionally left 
+    unaccounted for in determining the scaling. Those values outside the limits saturate at 0 or 1 in the figure."""
 
-    # TODO: find a cleaner way to do this.
+    # TODO: validate all inputs.
     # Validate inputs
     inputs = {'data':data, 'title':title, 'n_cuts':n_cuts, 'xcuts':xcuts, 'ycuts':ycuts, 'zcuts':zcuts, 'figsize':figsize}
     validated_inputs = _validate_inputs(**inputs)
     locals().update(validated_inputs)
 
     # Scale bulk of data to [0, 1].
-    data = _scale_data(data, clip_mode='stdev', stdevs=4) # Side-effect: breaks alias.
+    data = _scale_data(data, limit_mode=limit_mode, stdevs=stdevs, quantile=quantile, limits=limits) # Side-effect: breaks alias.
     
     # Get cuts.
     xcuts, ycuts, zcuts = _get_cuts(data, xcuts, ycuts, zcuts, n_cuts)
@@ -188,6 +197,7 @@ def heatslices(data, title=None, n_cuts=5, xcuts=[], ycuts=[], zcuts=[], figsize
     # maxcuts is the number of cuts in the dimension with the largest number of cuts.
     maxcuts = max(list(map(lambda cuts: len(cuts), [xcuts, ycuts, zcuts])))
     
+    # TODO: check out imshow param extent for anisotropy
     # TODO: properly scale subplots / axs such that scale is consistent across all images.
     fig, axs = plt.subplots(3, maxcuts, sharex='row', sharey='row', figsize=figsize)
     plt.subplots_adjust(left=0.1, bottom=0.1, right=0.9, top=0.9, wspace=0.1, hspace=0.2)
@@ -197,7 +207,7 @@ def heatslices(data, title=None, n_cuts=5, xcuts=[], ycuts=[], zcuts=[], figsize
     for row, cuts in enumerate([xcuts, ycuts, zcuts]):
         for col, cut in enumerate(cuts):
             axs[row, col].grid(False)
-            img = axs[row, col].imshow(data.take(cut, row), vmin=0, vmax=1, cmap='gray')
+            img = axs[row, col].imshow(data.take(cut, row), vmin=vmin, vmax=vmax, cmap=cmap)
     cax = plt.axes([0.925, 0.1, 0.025, 0.77])
     plt.colorbar(img, cax=cax)
     fig.suptitle(title, fontsize=20)
