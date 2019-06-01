@@ -163,7 +163,48 @@ def _pad_to_same_shape(template, target):
     
     return template, target
 
+################################################################################
+# for Daniel's demo, let's use this slightly different version
 
-def torch_apply_transform_daniel():
+
+
+
+def torch_apply_transform_daniel(template, target, sigmaR, eV, eL=0, eT=0, **kwargs):
+    ''' daniel's version to be replaced later 
+    use the same signature as previous
+    '''
+    # Set defaults.
+    arguments = {
+        'template':template, # atlas file name
+        'target':target, # target file name
+        'a':2, # smoothing kernel, scaled to pixel size
+        'p':2, # power of laplacian for smoothing kernel
+        'niter':200, # number of iterations
+        'epsilon':eV, # eV
+        'epsilonL':eL, # not needed
+        'epsilonT':eT, # not needed
+        'minbeta':1e-15, # make close to 0
+        'sigma':1.0, # sigmaM
+        'sigmaR':sigmaR, # sigmaR
+        'nt':5, # number of time steps in velocity field
+        'do_affine':1, # 0 = False
+        'checkaffinestep':0, # 0 = False
+        'im_norm_ms':0, # 0 = False
+        'gpu_number':0, # index of CUDA_VISIBLE_DEVICES to use, or None to use CPU
+        'dtype':'float', # vs double
+        'energy_fraction':0.000, # fraction of initial energy at which to stop, make small
+        'cc':1, # contrast correction, 1=True
+        'cc_channels':[], # image channels to run contrast correction, 0-indexed ([] means all channels)
+        'costmask':None, # costmask file name
+        'outdir':'.', # output directory name
+        'optimizer':'gd', # gradient descent
+   }
+    # Update parameters with kwargs.
+    arguments.update(kwargs)
+    
+
+def torch_register_daniel():
     ''' daniel's version to be replaced later '''
     pass
+torch_apply_transform = torch_apply_transform_daniel
+torch_register = torch_register_daniel
