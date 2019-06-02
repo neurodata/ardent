@@ -72,7 +72,7 @@ def load(file_path):
     
 
     
-
+'''
 # Raw unadulterated testing ground:
 
 import numpy as np
@@ -103,3 +103,4 @@ x = load(atlas_saved_path)
 print(type(x))
 print(x.shape == atlas.shape)
 print(np.all(x == atlas))
+'''

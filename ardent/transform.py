@@ -25,7 +25,7 @@ class Transform():
         """Perform a registration using LDDMM between template and target. 
         Populates attributes for future calls to the apply_transform method."""
 
-        outdict = torch_lddmm_wrapper.torch_register(template, target, sigmaR, eV, eL=0, eT=0, **kwargs)
+        outdict = torch_lddmm_wrapper.torch_register(template, target, sigmaR, eV, eL=eL, eT=eT, **kwargs)
         '''outdict contains:
             - Aphis
             - phis
