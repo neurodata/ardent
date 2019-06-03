@@ -1,5 +1,7 @@
+import numpy as np
 import SimpleITK as sitk
 from pathlib import Path
+
 
 def _validate_inputs(**kwargs):
     """Accepts arbitrary kwargs. If recognized, they are validated.
@@ -49,8 +51,30 @@ def save(data, file_path):
     # Save data to file_path.
     sitk.WriteImage(data_Image, str(file_path))
 
+    
+def downsample(I,down=[2,2,2]):
+    ''' downsampling for daniel's demo
+    down should be a 3 tuple
+    '''
+    nxd = np.array(I.shape)//np.array(down)
+    Id = np.zeros(nxd)        
+    for i in range(down[0]):
+        for j in range(down[1]):
+            for k in range(down[2]):
+                Id += I[i:down[0]*nxd[0]:down[0],
+                        j:down[1]*nxd[1]:down[1],k:down[2]*nxd[2]:down[2]]/(down[0]*down[1]*down[2])
+    return Id
 
-def load(file_path):
+                
+def normalize(atlas):
+    '''normalize for daniel's demo, use standard absolute deviation
+    '''
+    atlas_mean_absolute_deviation = np.mean(np.abs(atlas - np.median(atlas)))
+    atlas -= np.mean(atlas)
+    atlas /= atlas_mean_absolute_deviation
+    return atlas
+
+def load(file_path, down=None, norm=None, pad=None):
     """Load data from file_path."""
 
     # Validate inputs.
@@ -66,9 +90,19 @@ def load(file_path):
 
     # Convert data_Image to np.ndarray.
     data = sitk.GetArrayFromImage(data_Image)
+    
+    if down is not None:
+        data = downsample(data,down)
+    
+    if pad is not None:
+        data = np.pad(data,pad,mode='constant',constant_values=0)
+        
+    if norm is not None:
+        data = normalize(data)
 
     return data
     
+
     
 
     

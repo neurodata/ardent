@@ -436,7 +436,7 @@ class Transformer:
     
     def show_image(self,I,x=None,n=None,fig=None,clim=None):
         if n is None:
-            n = 5
+            n = 6
         if x is None:        
             x = [np.arange(n) - np.mean(np.arange(n)) for n in I.shape]
         slices = np.linspace(0,I.shape[2],n+2)
@@ -477,6 +477,10 @@ def torch_apply_transform_daniel(image:np.ndarray, deform_to='template', Aphis=N
         out = lddmm.interp3(lddmm.xJ,torch.tensor(image,dtype=lddmm.dtype,device=lddmm.device),lddmm.Aphi)
     elif deform_to == 'target':
         out = lddmm.interp3(lddmm.xI,torch.tensor(image,dtype=lddmm.dtype,device=lddmm.device),lddmm.phiiAi)
+    elif deform_to == 'template-identity': # deform to template with identity
+        out = lddmm.interp3(lddmm.xJ,torch.tensor(image,dtype=lddmm.dtype,device=lddmm.device),lddmm.XI)
+    elif deform_to == 'target-identity':
+        out = lddmm.interp3(lddmm.xI,torch.tensor(image,dtype=lddmm.dtype,device=lddmm.device),lddmm.XJ)
     return out.cpu().numpy()
     
 import matplotlib.pyplot as plt
