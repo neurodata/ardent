@@ -69,7 +69,7 @@ class Transform():
             'phiinivs':self.phiinvs,
             'Aphis':self.Aphis,
             'phiinvAinvs':self.phiinvAinvs,
-            'A':self.A
+            'affine':self.affine
             }
         
         io_save(attribute_dict, file_path)

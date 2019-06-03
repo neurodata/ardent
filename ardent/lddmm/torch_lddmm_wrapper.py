@@ -86,8 +86,8 @@ def torch_register(template, target, sigmaR, eV, eL=0, eT=0, **kwargs):
 
     # Not presently included: Ainv.
     return {
-        'Aphis':np.array([Aphi0, Aphi1, Aphi2]), 
-        'phis':np.array([phi0, phi1, phi2]), 
+        'Aphis':np.stack([Aphi0, Aphi1, Aphi2]), 
+        'phis':np.stack([phi0, phi1, phi2]), 
         'phiinvs':phiinvs, 
         'phiinvAinvs':phiinvAinvs, 
         'A':lddmm.affineA.cpu().numpy(), 

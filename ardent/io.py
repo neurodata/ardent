@@ -1,3 +1,4 @@
+import numpy as np
 import SimpleITK as sitk
 from pathlib import Path
 
@@ -59,7 +60,7 @@ def save(data, file_path):
         # Save data to file_path.
         sitk.WriteImage(data_Image, str(file_path))
     elif isinstance(data, dict):
-        np.savez(data, file_path.with_suffix('')) # '.npz' is appended.
+        np.savez(file_path.with_suffix(''), **data) # '.npz' is appended.
     else:
         # _validate_inputs has failed.
         raise Exception(f"_validate_inputs has failed to prevent an improper type for data.\n"
