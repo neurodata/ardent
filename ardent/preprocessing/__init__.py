@@ -27,3 +27,5 @@ def preprocess(data:np.ndarray, processes:list):
     for process in processes:
         if process in preprocessing_functions:
             data = eval(f"{process}(data)")
+    
+    return data
