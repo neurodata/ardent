@@ -54,7 +54,8 @@ class Transform():
 
         deformed_subject = torch_lddmm_wrapper.torch_apply_transform(image=subject, deform_to=deform_to, Aphis=self.Aphis, phiinvAinvs=self.phiinvAinvs, lddmm=self.lddmm)
         
-        io_save(deformed_subject, save_path)
+        if save_path is not None:
+            io_save(deformed_subject, save_path)
 
         return deformed_subject
 
