@@ -32,7 +32,7 @@ def pad(data, pad_width=5, mode='edge', constant_values=0):
 
     _verify_data_is_ndarray(data)
 
-    pad_kwargs = {'data':data, pad_width':pad_width, 'mode':mode}
+    pad_kwargs = {'data':data, 'pad_width':pad_width, 'mode':mode}
     if mode == 'constant': pad_kwargs.update(constant_values=constant_values)
 
     padded_data = np.pad(**pad_kwargs)
