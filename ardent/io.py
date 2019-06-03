@@ -10,14 +10,14 @@ def _validate_inputs(**kwargs):
 
     if 'data' in kwargs.keys():
         data = kwargs['data']
-        if isinstance(data, list):
-            # Verify that each element of the list is a np.ndarray object and recursion will stop at 1 level.
-            if not all(map(lambda datum: isinstance(datum, np.ndarray), data)):
-                raise ValueError(f"data must be either a np.ndarray or a list containing only np.ndarray objects.")
-            # Recurse into each element of the list of np.ndarray objects.
-            for index, datum in enumerate(data):
-                data[index] = _validate_inputs(data=datum)['data']
-        # If data is neither a list nor a np.ndarray, raise TypeError.
+        if isinstance(data, dict):
+            # Verify that each value in the dict is a np.ndarray object and recursion will stop at 1 level.
+            if not all(map(lambda datum: isinstance(datum, np.ndarray), data.values())):
+                raise TypeError(f"data must be either a np.ndarray or a dictionary mapping only to np.ndarray objects.")
+            # Recurse into each element of the dictionary keys of np.ndarray objects.
+            for key, datum in data.items():
+                data[key] = _validate_inputs(data=datum)['data']
+        # If data is neither a list, dict, nor a np.ndarray, raise TypeError.
         elif not isinstance(data, np.ndarray):
             raise TypeError(f"data must be a np.ndarray.\ntype(data): {type(data)}.")
         # data is a np.ndarray.
