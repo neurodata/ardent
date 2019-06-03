@@ -83,39 +83,3 @@ def load(file_path):
         data = sitk.GetArrayFromImage(data_Image)
         # data is a np.ndarray.
         return data
-    
-    
-
-    
-
-# Raw unadulterated testing ground:
-
-import numpy as np
-import ardent
-import matplotlib
-# %matplotlib inline
-# TODO: remove with ardent.io.
-from pathlib import Path
-import nibabel as nib 
-
-directory_path = Path('/home/dcrowley/image_lddmm_tensorflow')
-atlas_image_filename = 'average_template_50.img'
-target_image_filename = '180517_Downsample.img'
-
-atlasPath = directory_path / atlas_image_filename
-targetPath = directory_path / target_image_filename
-
-atlas = np.array(nib.load(str(atlasPath)).get_data()).astype(float).squeeze()
-target = np.array(nib.load(str(targetPath)).get_data()).astype(float).squeeze()
-
-atlas_saved_path = '/home/dcrowley/ARDENT_gpu_test/savetestdir/atlastarget'
-# locals().update(_validate_inputs(file_path=atlas_saved_path))
-# atlas_saved_path = _validate_inputs(file_path=atlas_saved_path)['file_path']
-
-
-# save([atlas, target], atlas_saved_path)
-
-# x = load(atlas_saved_path)
-
-# print(type(x))
-# print(x.shape)
