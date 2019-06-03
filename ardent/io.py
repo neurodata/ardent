@@ -53,6 +53,8 @@ def save(data, file_path):
 
     if isinstance(data, np.ndarray):
         # Convert data to sitk.Image.
+        # Take the transpose of data to premptively correct for the f-ordering of SimpleITK Images.
+        data = data.T
         data_Image = sitk.GetImageFromArray(data) # Side effect: breaks alias.
         # Save data to file_path.
         sitk.WriteImage(data_Image, str(file_path))
@@ -81,5 +83,7 @@ def load(file_path):
         data_Image = sitk.ReadImage(str(file_path))
         # Convert data_Image to np.ndarray.
         data = sitk.GetArrayFromImage(data_Image)
+        # Take the transpose of data to correct for the f-ordering of SimpleITK Images.
+        data = data.T
         # data is a np.ndarray.
         return data
