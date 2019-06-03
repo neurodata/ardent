@@ -56,29 +56,8 @@ def save(data, file_path):
         data_Image = sitk.GetImageFromArray(data) # Side effect: breaks alias.
         # Save data to file_path.
         sitk.WriteImage(data_Image, str(file_path))
-    elif isinstance(data, list):
-        # Write each element to file, then combine the results and delete the individual files.
-        fileNames = []
-        for datum in data:
-            # Choose a random nonnegative integer of length 10 as a file name.
-            # Assumes not all such filenames are in this directory.
-            fileName = ''.join(map(str, np.random.randint(0, 10, 10)))
-            # If it is already there, choose another.
-            while file_path.parent / fileName in file_path.parent.iterdir():
-                fileName = ''.join(map(str, np.random.randint(0, 10, 10)))
-            fileNames.append(fileName)
-            # Save datum using this fileName.
-            save(datum, fileName)
-        # All elements in data are saved in files with names corresponding to elements in fileNames.
-        # Read them all into a single Image.
-        filePaths = [file_path.parent / fileName for fileName in fileNames]
-        combined_file = sitk.ReadImage(map(str, filePaths))
-        # Remove individual files.
-        for filePath in filePaths:
-            filePath.unlink()
-        # Write the combined_file with the original file_path.
-        sitk.WriteImage(combined_file, file_path)
-
+    elif isinstance(data, dict):
+        np.savez(data, file_path.with_suffix('')) # '.npz' is appended.
     else:
         # _validate_inputs has failed.
         raise Exception(f"_validate_inputs has failed to prevent an improper type for data.\n"
@@ -93,13 +72,17 @@ def load(file_path):
     validated_inputs = _validate_inputs(**inputs)
     file_path = validated_inputs['file_path']
 
-    # Read in data as sitk.Image.
-    data_Image = sitk.ReadImage(str(file_path))
-
-    # Convert data_Image to np.ndarray.
-    data = sitk.GetArrayFromImage(data_Image)
-
-    return data
+    if file_path.suffix == '.npz':
+        data = np.load(file_path)
+        # data is a dictionary.
+        return data
+    else:
+        # Read in data as sitk.Image.
+        data_Image = sitk.ReadImage(str(file_path))
+        # Convert data_Image to np.ndarray.
+        data = sitk.GetArrayFromImage(data_Image)
+        # data is a np.ndarray.
+        return data
     
     
 
@@ -130,9 +113,9 @@ atlas_saved_path = '/home/dcrowley/ARDENT_gpu_test/savetestdir/atlastarget'
 # atlas_saved_path = _validate_inputs(file_path=atlas_saved_path)['file_path']
 
 
-save([atlas, target], atlas_saved_path)
+# save([atlas, target], atlas_saved_path)
 
-x = load(atlas_saved_path)
+# x = load(atlas_saved_path)
 
-print(type(x))
-print(x.shape)
+# print(type(x))
+# print(x.shape)

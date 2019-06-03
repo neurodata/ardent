@@ -3,7 +3,8 @@
 # import statements.
 import numpy as np
 from .lddmm import torch_lddmm_wrapper
-from .io import save
+import io.save
+from pathlib import Path
 
 class Transform():
     """transform stores the deformation that is output by a registration 
@@ -62,13 +63,35 @@ class Transform():
 
     
     def save(self, file_path):
-        """Saves the following attributes to file_path: phis, phiinvs, Aphis, phiinvAinvs, & A."""
+        """Saves the following attributes to file_path: phis, phiinvs, Aphis, phiinvAinvs, & A.
+        The file is saved in .npz format."""
 
-        pass
-    
+        attribute_dict = {
+            'phis':self.phis,
+            'phiinivs':self.phiinvs,
+            'Aphis':self.Aphis,
+            'phiinvAinvs':self.phiinvAinvs,
+            'A':self.A
+            }
+        
+        io.save(attribute_dict, file_path)
 
     def load(self, file_path):
         """Loads the following attributes from file_path: phis, phiinvs, Aphis, phiinvAinvs, & A."""
 
-        # But what to do with them?
-        pass
+        # Validate file_path.
+        file_path = Path(file_path)
+        if not file_path.suffix:
+            file_path = file_path.with_suffix('.npz')
+        elif file_path.suffix != '.npz':
+            raise ValueError(f"file_path may not have an extension other than .npz.\n"
+                f"file_path.suffix: {file_path.suffix}.")
+        # file_path is appropriate.
+
+        with np.load(file_path) as attribute_dict:
+            self.phis = attribute_dict['phis']
+            self.phiinvs = attribute_dict['phiinvs']
+            self.Aphis = attribute_dict['Aphis']
+            self.phiinvAinvs = attribute_dict['phiinvAinvs']
+            self.A = attribute_dict['A']
+        
