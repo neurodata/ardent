@@ -312,7 +312,7 @@ class Transformer:
         # propagate error through poly
         Df = torch.zeros(self.nxJ, device=self.device, dtype=self.dtype)            
         for o in range(1,self.order):
-            Df +=  o * self.AphiI**(o-1)
+            Df +=  o * self.AphiI**(o-1) *self.coeffs[o]
         errDf = err * Df
         # deform back through flow
         self.phi = self.XI.clone().detach() # torch recommended way to make a copy
