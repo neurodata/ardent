@@ -90,7 +90,7 @@ def torch_register(template, target, sigmaR, eV, eL=0, eT=0, **kwargs):
         'phis':np.array([phi0, phi1, phi2]), 
         'phiinvs':phiinvs, 
         'phiinvAinvs':phiinvAinvs, 
-        'A':lddmm.affineA, 
+        'A':lddmm.affineA.cpu().numpy(), 
         
         'lddmm':lddmm}
 
