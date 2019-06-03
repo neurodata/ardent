@@ -3,7 +3,7 @@
 # import statements.
 import numpy as np
 from .lddmm import torch_lddmm_wrapper
-import io.save
+from .io import save as io_save
 from pathlib import Path
 
 class Transform():
@@ -54,10 +54,7 @@ class Transform():
 
         deformed_subject = torch_lddmm_wrapper.torch_apply_transform(image=subject, deform_to=deform_to, Aphis=self.Aphis, phiinvAinvs=self.phiinvAinvs, lddmm=self.lddmm)
         
-        # TODO:
-        # Perform I/O as needed.
-
-
+        io_save(deformed_subject, save_path)
 
         return deformed_subject
 
@@ -74,7 +71,7 @@ class Transform():
             'A':self.A
             }
         
-        io.save(attribute_dict, file_path)
+        io_save(attribute_dict, file_path)
 
     def load(self, file_path):
         """Loads the following attributes from file_path: phis, phiinvs, Aphis, phiinvAinvs, & A."""
