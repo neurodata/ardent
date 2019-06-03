@@ -27,7 +27,7 @@ def _validate_inputs(**kwargs):
 
     if 'file_path' in kwargs.keys():
         file_path = kwargs['file_path']
-        file_path = Path(file_path).resolve() # Will raise exceptions if file_path is not an oppropriate type.
+        file_path = Path(file_path).expanduser().resolve() # Will raise exceptions if file_path is not an oppropriate type.
         if not file_path.parent.is_dir():
             raise FileNotFoundError(f"file_path corresponds to a location that does not presently exist.\n"
                 f"file_path.parent: {file_path.parent}.")
