@@ -3,6 +3,7 @@
 # import statements.
 import numpy as np
 from .lddmm import torch_lddmm_wrapper
+from .io import save
 
 class Transform():
     """transform stores the deformation that is output by a registration 
@@ -27,9 +28,9 @@ class Transform():
 
         outdict = torch_lddmm_wrapper.torch_register(template, target, sigmaR, eV, eL=0, eT=0, **kwargs)
         '''outdict contains:
-            - Aphis
             - phis
             - phiinvs
+            - Aphis
             - phiinvAinvs
             - A
 
@@ -37,6 +38,8 @@ class Transform():
         '''
 
         # Populate attributes.
+        self.phis = outdict['phis']
+        self.phiinvs = outdict['phiinvs']
         self.Aphis = outdict['Aphis']
         self.phiinvAinvs = outdict['phiinvAinvs']
         self.affine = outdict['A']
@@ -56,3 +59,16 @@ class Transform():
 
 
         return deformed_subject
+
+    
+    def save(self, file_path):
+        """Saves the following attributes to file_path: phis, phiinvs, Aphis, phiinvAinvs, & A."""
+
+        pass
+    
+
+    def load(self, file_path):
+        """Loads the following attributes from file_path: phis, phiinvs, Aphis, phiinvAinvs, & A."""
+
+        # But what to do with them?
+        pass
