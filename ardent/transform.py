@@ -16,6 +16,8 @@ class Transform():
         TODO: Add option to register on initialization?"""
 
         # Create attributes.
+        self.phis = None
+        self.phiinvs = None
         self.Aphis = None
         self.phiinvAinvs = None
         self.affine = None
@@ -66,7 +68,7 @@ class Transform():
 
         attribute_dict = {
             'phis':self.phis,
-            'phiinivs':self.phiinvs,
+            'phiinvs':self.phiinvs,
             'Aphis':self.Aphis,
             'phiinvAinvs':self.phiinvAinvs,
             'affine':self.affine
@@ -91,5 +93,5 @@ class Transform():
             self.phiinvs = attribute_dict['phiinvs']
             self.Aphis = attribute_dict['Aphis']
             self.phiinvAinvs = attribute_dict['phiinvAinvs']
-            self.A = attribute_dict['A']
+            self.affine = attribute_dict['affine']
         
