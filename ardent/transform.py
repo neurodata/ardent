@@ -2,7 +2,8 @@
 
 # import statements.
 import numpy as np
-from .lddmm import torch_lddmm_wrapper
+from lddmm.transformer import torch_register
+from lddmm.transformer import torch_apply_transform
 from .io import save as io_save
 from pathlib import Path
 
