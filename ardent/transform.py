@@ -2,9 +2,10 @@
 
 # import statements.
 import numpy as np
-from lddmm.transformer import torch_register
-from lddmm.transformer import torch_apply_transform
+from .lddmm.transformer import torch_register
+from .lddmm.transformer import torch_apply_transform
 from .io import save as io_save
+# TODO: rename io as fileio.
 from pathlib import Path
 
 class Transform():
@@ -23,14 +24,14 @@ class Transform():
         self.phiinvAinvs = None
         self.affine = None
 
-        self.lddmm = None
+        self.transformer = None
     
 
     def register(self, template:np.ndarray, target:np.ndarray, sigmaR, eV, eL=0, eT=0, **kwargs) -> None:
-        """Perform a registration using LDDMM between template and target. 
+        """Perform a registration using transformer between template and target. 
         Populates attributes for future calls to the apply_transform method."""
 
-        outdict = torch_lddmm_wrapper.torch_register(template, target, sigmaR, eV, eL=0, eT=0, **kwargs)
+        outdict = torch_register(template, target, sigmaR, eV, eL=0, eT=0, **kwargs)
         '''outdict contains:
             - phis
             - phiinvs
@@ -38,7 +39,7 @@ class Transform():
             - phiinvAinvs
             - A
 
-            - lddmm
+            - transformer
         '''
 
         # Populate attributes.
@@ -48,14 +49,14 @@ class Transform():
         self.phiinvAinvs = outdict['phiinvAinvs']
         self.affine = outdict['A']
 
-        self.lddmm = outdict['lddmm']
+        self.transformer = outdict['transformer']
 
 
     def apply_transform(self, subject:np.ndarray, deform_to="template", save_path=None) -> np.ndarray:
         """Apply the transformation--computed by the last call to self.register--
         to <subject>, deforming it into the space of <deform_to>."""
 
-        deformed_subject = torch_lddmm_wrapper.torch_apply_transform(image=subject, deform_to=deform_to, Aphis=self.Aphis, phiinvAinvs=self.phiinvAinvs, lddmm=self.lddmm)
+        deformed_subject = torch_apply_transform(image=subject, deform_to=deform_to, Aphis=self.Aphis, phiinvAinvs=self.phiinvAinvs, transformer=self.transformer)
         
         if save_path is not None:
             io_save(deformed_subject, save_path)
@@ -78,7 +79,9 @@ class Transform():
         io_save(attribute_dict, file_path)
 
     def load(self, file_path):
-        """Loads the following attributes from file_path: phis, phiinvs, Aphis, phiinvAinvs, & A."""
+        """Loads the following attributes from file_path: phis, phiinvs, Aphis, phiinvAinvs, & A.
+        Presently they can only be accessed. This is not sufficient to run apply_transform 
+        without first running register."""
 
         # Validate file_path.
         file_path = Path(file_path)

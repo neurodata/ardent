@@ -344,7 +344,7 @@ def torch_register(template, target, sigmaR, eV, eL=0, eT=0, **kwargs):
         device = 'cpu'
     dtype = torch.float64
         
-    lddmm = Transformer(torch.tensor(template,dtype=dtype,device=device),
+    transformer = Transformer(torch.tensor(template,dtype=dtype,device=device),
                         torch.tensor(target,dtype=dtype,device=device),**arguments)
     if arguments['draw']:
         plt.ion()
@@ -353,21 +353,21 @@ def torch_register(template, target, sigmaR, eV, eL=0, eT=0, **kwargs):
         if arguments['sigmaA'] is not None:
             f3 = plt.figure()
     for it in range(arguments['niter']):
-        lddmm.forward()
-        lddmm.cost()
+        transformer.forward()
+        transformer.cost()
         if arguments['sigmaA'] is not None:
-            lddmm.weights()
+            transformer.weights()
         if it >=0 and arguments['eV']>-1.0:
-            lddmm.step_v(eV=arguments['eV'])
-        lddmm.step_A(eT=arguments['eT'],eL=arguments['eL'])
+            transformer.step_v(eV=arguments['eV'])
+        transformer.step_A(eT=arguments['eT'],eL=arguments['eL'])
         
         if arguments['draw'] and not it%5:        
             plt.close(f1)
             f1 = plt.figure()
             ax = f1.add_subplot(1,1,1)    
-            ERsave = lddmm.ERsave    
-            EMsave = lddmm.EMsave
-            Esave = lddmm.Esave
+            ERsave = transformer.ERsave    
+            EMsave = transformer.EMsave
+            Esave = transformer.Esave
             ax.plot(ERsave)
             ax.plot(EMsave)
             ax.plot(Esave)
@@ -377,44 +377,44 @@ def torch_register(template, target, sigmaR, eV, eL=0, eT=0, **kwargs):
             
             plt.close(f2)
             f2 = plt.figure()
-            #lddmm.show_image(lddmm.fAphiI.cpu().numpy(),fig=f2) # or show err?
-            lddmm.show_image(lddmm.err.cpu().numpy(),fig=f2) # or show err?
+            #transformer.show_image(transformer.fAphiI.cpu().numpy(),fig=f2) # or show err?
+            transformer.show_image(transformer.err.cpu().numpy(),fig=f2) # or show err?
             f2.canvas.draw()
             
             if arguments['sigmaA'] is not None:
                 plt.close(f3)
                 f3 = plt.figure()
-                lddmm.show_image(lddmm.WM.cpu().numpy(),fig=f3,clim=[0,1])            
+                transformer.show_image(transformer.WM.cpu().numpy(),fig=f3,clim=[0,1])            
                 f3.canvas.draw()
                 
             plt.pause(0.0001)
-        print(f'Completed iteration {it}, E={lddmm.Esave[-1]}, EM={lddmm.EMsave[-1]}, ER={lddmm.ERsave[-1]}')
+        print(f'Completed iteration {it}, E={transformer.Esave[-1]}, EM={transformer.EMsave[-1]}, ER={transformer.ERsave[-1]}')
             
     
     return {
-        'Aphis':lddmm.Aphi, 
-        'phis':lddmm.phi, 
-        'phiinvs':lddmm.phii, 
-        'phiinvAinvs':lddmm.phiiAi, 
-        'A':lddmm.A, 
-        'lddmm':lddmm}
+        'Aphis':transformer.Aphi, 
+        'phis':transformer.phi, 
+        'phiinvs':transformer.phii, 
+        'phiinvAinvs':transformer.phiiAi, 
+        'A':transformer.A, 
+        'transformer':transformer}
 
 
-def torch_apply_transform(image:np.ndarray, deform_to='template', Aphis=None, phiinvAinvs=None, lddmm=None):
+def torch_apply_transform(image:np.ndarray, deform_to='template', Aphis=None, phiinvAinvs=None, transformer=None):
     """daniel's version for demo to be replaced
     Apply the transformation stored in Aphis (for deforming to the template) and phiinvAinvs (for deforming to the target).
     If deform_to='template', Aphis must be provided.
     If deform_to='target', phiinvAinvs must be provided."""
-    # Presently must be given lddmm.
-    if lddmm is None:
-        raise RuntimeError("lddmm must be provided with present implementation.")
+    # Presently must be given transformer.
+    if transformer is None:
+        raise RuntimeError("transformer must be provided with present implementation.")
         
     if deform_to == 'template':
-        out = lddmm.interp3(lddmm.xJ,torch.tensor(image,dtype=lddmm.dtype,device=lddmm.device),lddmm.Aphi)
+        out = transformer.interp3(transformer.xJ,torch.tensor(image,dtype=transformer.dtype,device=transformer.device),transformer.Aphi)
     elif deform_to == 'target':
-        out = lddmm.interp3(lddmm.xI,torch.tensor(image,dtype=lddmm.dtype,device=lddmm.device),lddmm.phiiAi)
+        out = transformer.interp3(transformer.xI,torch.tensor(image,dtype=transformer.dtype,device=transformer.device),transformer.phiiAi)
     elif deform_to == 'template-identity': # deform to template with identity
-        out = lddmm.interp3(lddmm.xJ,torch.tensor(image,dtype=lddmm.dtype,device=lddmm.device),lddmm.XI)
+        out = transformer.interp3(transformer.xJ,torch.tensor(image,dtype=transformer.dtype,device=transformer.device),transformer.XI)
     elif deform_to == 'target-identity':
-        out = lddmm.interp3(lddmm.xI,torch.tensor(image,dtype=lddmm.dtype,device=lddmm.device),lddmm.XJ)
+        out = transformer.interp3(transformer.xI,torch.tensor(image,dtype=transformer.dtype,device=transformer.device),transformer.XJ)
     return out.cpu().numpy()
