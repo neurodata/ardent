@@ -392,11 +392,11 @@ def torch_register(template, target, sigmaR, eV, eL=0, eT=0, **kwargs):
             
     
     return {
-        'Aphis':transformer.Aphi, 
-        'phis':transformer.phi, 
-        'phiinvs':transformer.phii, 
-        'phiinvAinvs':transformer.phiiAi, 
-        'A':transformer.A, 
+        'Aphis':transformer.Aphi.cpu().numpy(), 
+        'phis':transformer.phi.cpu().numpy(), 
+        'phiinvs':transformer.phii.cpu().numpy(), 
+        'phiinvAinvs':transformer.phiiAi.cpu().numpy(), 
+        'A':transformer.A.cpu().numpy(), 
         'transformer':transformer}
 
 
