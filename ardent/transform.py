@@ -2,6 +2,7 @@
 
 # import statements.
 import numpy as np
+from .presets import get_registration_presets
 from .lddmm.transformer import torch_register
 from .lddmm.transformer import torch_apply_transform
 from .io import save as io_save
@@ -26,12 +27,38 @@ class Transform():
 
         self.transformer = None
     
+    @staticmethod
+    def _handle_registration_parameters(preset:str, params:dict) -> dict:
+        """Provides default parameters based on <preset>, superseded by the provided parameters params.
+        Returns a dictionary with the resultant parameters."""
 
-    def register(self, template:np.ndarray, target:np.ndarray, sigmaR, eV, eL=0, eT=0, **kwargs) -> None:
+        preset_parameters = get_registration_presets(preset) # Type: dict.
+
+        final_parameters = preset_parameters.update(params)
+
+        return final_parameters
+
+
+    def register(self, template:np.ndarray, target:np.ndarray, 
+        preset=None, sigmaR=None, eV=None, eL=None, eT=None, **kwargs) -> None:
         """Perform a registration using transformer between template and target. 
-        Populates attributes for future calls to the apply_transform method."""
+        Populates attributes for future calls to the apply_transform method.
+        
+        If used, <preset> will provide default values for sigmaR, eV, eL, and eT, 
+        superseded by any such values that are provided.
 
-        outdict = torch_register(template, target, sigmaR, eV, eL=0, eT=0, **kwargs)
+        <preset> options:
+        'clarity'
+        """
+
+        # Collect registration parameters from chosen caller.
+        registration_parameters = dict(sigmaR=sigmaR, eV=eV, eL=eL, eT=eT, **kwargs)
+        registration_parameters = {key : value for key, value in registration_parameters.items() if value is not None}
+        # Fill unspecified parameters with presets if applicable.
+        if preset is not None:
+            registration_parameters = _handle_registration_parameters(preset, registration_parameters)
+
+        outdict = torch_register(template, target, **registration_parameters)
         '''outdict contains:
             - phis
             - phiinvs

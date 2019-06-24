@@ -1,13 +1,13 @@
-from . import lddmm
+from . import lddmm # Subpackage.
 
-from .transform import Transform
+from .transform import Transform # Class.
 
-from .visualization import heatslices
+from .visualization import heatslices # Function.
 
-from .io import save, load
+from .io import save, load # Functions.
 
-from . import preprocessing
-from .preprocessing import preprocess
+from . import preprocessing # Subpackage.
+from .preprocessing import preprocess # Function.
 
-from . import presets
-from .presets import basic_preprocessing
+from . import presets # Subpackage.
+from .presets import basic_preprocessing # Function.
