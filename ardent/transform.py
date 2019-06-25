@@ -56,7 +56,7 @@ class Transform():
         registration_parameters = {key : value for key, value in registration_parameters.items() if value is not None}
         # Fill unspecified parameters with presets if applicable.
         if preset is not None:
-            registration_parameters = _handle_registration_parameters(preset, registration_parameters)
+            registration_parameters = Transform._handle_registration_parameters(preset, registration_parameters)
 
         outdict = torch_register(template, target, **registration_parameters)
         '''outdict contains:
