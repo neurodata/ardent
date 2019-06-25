@@ -32,11 +32,13 @@ class Transform():
         """Provides default parameters based on <preset>, superseded by the provided parameters params.
         Returns a dictionary with the resultant parameters."""
 
+        # Get default registration parameters based on <preset>.
         preset_parameters = get_registration_presets(preset) # Type: dict.
 
-        final_parameters = preset_parameters.update(params)
+        # Supplement and supplant with <params> from the caller.
+        preset_parameters.update(params)
 
-        return final_parameters
+        return preset_parameters
 
 
     def register(self, template:np.ndarray, target:np.ndarray, 
