@@ -389,7 +389,18 @@ def torch_register(template, target, sigmaR, eV, eL=0, eT=0, **kwargs):
                 
             plt.pause(0.0001)
         print(f'Completed iteration {it}, E={transformer.Esave[-1]}, EM={transformer.EMsave[-1]}, ER={transformer.ERsave[-1]}')
+        
+        # Display final images.
+        if arguments['tune']:
+            f, axs = plt.subplots(2,2)
+            axs[0,0].plot(list(zip(transformer.Esave,transformer.EMsave,transformer.ERsave)))
+            xlim = axs[0,0].get_xlim()
+            ylim = axs[0,0].get_ylim()
+            axs[0,0].set_aspect((xlim[1]-xlim[0])/(ylim[1]-ylim[0]))
+            axs[0,0].legend(['Etot','Ematch','Ereg'])
+            axs[0,0].set_title('Energy minimization')
             
+            vmax = (torch.max(torch.sum(transformer.v**2, dim=1))**0.5).cpu().numpy()
     
     return {
         'Aphis':transformer.Aphi.cpu().numpy(), 
