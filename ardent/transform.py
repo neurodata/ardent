@@ -41,7 +41,7 @@ class Transform():
         return preset_parameters
 
 
-    def register(self, template:np.ndarray, target:np.ndarray, 
+    def register(self, template:np.ndarray, target:np.ndarray, template_resolution=[1,1,1], target_resolution=[1,1,1],
         preset=None, sigmaR=None, eV=None, eL=None, eT=None, **kwargs) -> None:
         """Perform a registration using transformer between template and target. 
         Populates attributes for future calls to the apply_transform method.
@@ -59,6 +59,11 @@ class Transform():
         # Fill unspecified parameters with presets if applicable.
         if preset is not None:
             registration_parameters = Transform._handle_registration_parameters(preset, registration_parameters)
+
+        # TODO: clean up this hotfix.
+        xI = [np.arange(nxyz_i)*dxyz_i - np.mean(np.arange(nxyz_i)*dxyz_i) for nxyz_i, dxyz_i in zip(data.shape, template_resolution)]
+        xJ = [np.arange(nxyz_i)*dxyz_i - np.mean(np.arange(nxyz_i)*dxyz_i) for nxyz_i, dxyz_i in zip(data.shape, target_resolution)]
+        registration_parameters.update(xI=xI, xJ=xJ)
 
         outdict = torch_register(template, target, **registration_parameters)
         '''outdict contains:
