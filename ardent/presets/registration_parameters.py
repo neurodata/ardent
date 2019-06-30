@@ -1,7 +1,7 @@
 preset_parameters = {}
 
 # clarity preset.
-preset_parameters.update({'clarity' : dict(sigmaR=, eV=, eL=, eT=)})
+preset_parameters.update({'clarity' : dict(sigmaR=1e4, eV=5e6, eL=5e-11, eT=5e-4)})
 
 def get_registration_presets(preset:str) -> dict:
     """If <preset> is recognized, returns a dictionary containing Transform.register kwargs."""
