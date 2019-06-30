@@ -63,7 +63,7 @@ class Transform():
         # TODO: clean up this hotfix.
         xI = [np.arange(nxyz_i)*dxyz_i - np.mean(np.arange(nxyz_i)*dxyz_i) for nxyz_i, dxyz_i in zip(template.shape, template_resolution)]
         xJ = [np.arange(nxyz_i)*dxyz_i - np.mean(np.arange(nxyz_i)*dxyz_i) for nxyz_i, dxyz_i in zip(target.shape, target_resolution)]
-        registration_parameters.update(xI=xI, xJ=xJ)
+        # registration_parameters.update(xI=xI, xJ=xJ)
 
         outdict = torch_register(template, target, **registration_parameters)
         '''outdict contains:
