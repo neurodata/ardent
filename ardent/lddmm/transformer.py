@@ -324,6 +324,7 @@ def torch_register(template, target, sigmaR, eV, eL=0, eT=0, **kwargs):
         'a':2, # smoothing kernel, scaled to pixel size
         'p':2,
         'niter':200,
+        'naffine':50, 
         'eV':eV, # velocity
         'eL':eL, # linear
         'eT':eT, # translation
@@ -357,7 +358,7 @@ def torch_register(template, target, sigmaR, eV, eL=0, eT=0, **kwargs):
         transformer.cost()
         if arguments['sigmaA'] is not None:
             transformer.weights()
-        if it >=0 and arguments['eV']>-1.0:
+        if it >= naffine and arguments['eV']>-1.0:
             transformer.step_v(eV=arguments['eV'])
         transformer.step_A(eT=arguments['eT'],eL=arguments['eL'])
         
