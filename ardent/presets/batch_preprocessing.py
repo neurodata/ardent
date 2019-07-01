@@ -6,5 +6,5 @@ def basic_preprocessing(data):
     - center_to_mean
     - pad"""
 
-    return preprocess(data, ['normalize_by_MAD', 'center_to_mean', 'pad'])
+    return preprocess(data, ['pad', 'normalize_by_MAD', 'center_to_mean'])
 

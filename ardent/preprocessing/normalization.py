@@ -27,7 +27,7 @@ def center_to_mean(data):
     return centered_data
 
 
-def pad(data, pad_width=5, mode='edge', constant_values=0):
+def pad(data, pad_width=5, mode='constant', constant_values=0):
     """Returns a padded copy of <data>."""
 
     _verify_data_is_ndarray(data)
