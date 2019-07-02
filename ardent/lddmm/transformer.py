@@ -418,7 +418,7 @@ def torch_register(template, target, transformer, sigmaR, eV, eL=0, eT=0, **kwar
         'A':transformer.A.cpu().numpy(), 
 
         'transformer':transformer, 
-        'v':transformer.v.cpu().numpy()
+        'v':transformer.v.cpu().numpy(),
         'I_shape':transformer.I_shape,
         'J_shape':transformer.J_shape,
         'Ires':transformer.Ires,
