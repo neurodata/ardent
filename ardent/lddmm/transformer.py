@@ -7,13 +7,12 @@ import torch
 from matplotlib import pyplot as plt
 
 class Transformer:
-    def __init__(self,I,J,
-                 xI=None,xJ=None,
+    def __init__(self,I,J, Ires, Jres,
                  nt=5,a=2.0,p=2.0,
                  sigmaM=1.0,sigmaR=1.0,
                  order=2,
                  sigmaA=None,
-                 **kwargs):
+                 A=None, v=None):
         '''
         Specify polynomial intensity mapping order with order parameters
         2 corresponds to linear, nothing less than 2 is supported
@@ -27,24 +26,18 @@ class Transformer:
             self.device = 'cpu'
         self.dtype = torch.float64
         
-        self.I = I
-        if xI is None:
-            xI = [torch.arange(I.shape[i],dtype=self.dtype,device=self.device) for i in range(3)]
-            xI = [x - torch.mean(x) for x in xI]
-        else:
-            xI = [torch.tensor(xI_i, dtype=self.dtype, device=self.device) for xI_i in xI]
+        self.I = torch.tensor(I, dtype=self.dtype, device=self.device)
+        xI = [np.arange(nxyz_i)*dxyz_i - np.mean(np.arange(nxyz_i)*dxyz_i) for nxyz_i, dxyz_i in zip(I.shape, Ires)] # Create coords as a list of numpy arrays.
+        xI = [torch.tensor(xI_i, dtype=self.dtype, device=self.device) for xI_i in xI] # Convert to lists of tensors.
         self.xI = xI
         self.nxI = I.shape
         self.dxI = torch.tensor([xI[0][1]-xI[0][0], xI[1][1]-xI[1][0], xI[2][1]-xI[2][0]],
                                 dtype=self.dtype,device=self.device)
         self.XI = torch.stack(torch.meshgrid(xI))
         
-        self.J = J
-        if xJ is None:
-            xJ = [torch.arange(J.shape[i],dtype=self.dtype,device=self.device) for i in range(3)]
-            xJ = [x - torch.mean(x) for x in xJ]
-        else:
-            xJ = [torch.tensor(xJ_i, dtype=self.dtype, device=self.device) for xJ_i in xJ]
+        self.J = torch.tensor(J, dtype=self.dtype, device=self.device)
+        xJ = [np.arange(nxyz_i)*dxyz_i - np.mean(np.arange(nxyz_i)*dxyz_i) for nxyz_i, dxyz_i in zip(J.shape, Jres)] # Create coords as a list of numpy arrays.
+        xJ = [torch.tensor(xJ_i, dtype=self.dtype, device=self.device) for xJ_i in xJ] # Convert to lists of tensors.
         self.xJ = xJ
         self.nxJ = J.shape
         self.dxJ = torch.tensor([xJ[0][1]-xJ[0][0], xJ[1][1]-xJ[1][0], xJ[2][1]-xJ[2][0]],
@@ -72,11 +65,13 @@ class Transformer:
         self.Esave = []
         
         usegrad = False # typically way too much memory
-        self.v = torch.zeros((self.nt,3,self.nxI[0],self.nxI[1],self.nxI[2]),
+        if v is None:
+            self.v = torch.zeros((self.nt,3,self.nxI[0],self.nxI[1],self.nxI[2]),
                              dtype=self.dtype,device=self.device, requires_grad=usegrad)
         self.vhat = torch.rfft(self.v,3,onesided=False)
-        self.A = torch.eye(4,dtype=self.dtype,device=self.device, requires_grad=usegrad)
-        
+        if A is None:
+            self.A = torch.eye(4,dtype=self.dtype,device=self.device, requires_grad=usegrad)
+
         # smoothing
         f0I = torch.arange(self.nxI[0],dtype=self.dtype,device=self.device)/self.dxI[0]/self.nxI[0]
         f1I = torch.arange(self.nxI[1],dtype=self.dtype,device=self.device)/self.dxI[1]/self.nxI[1]
@@ -310,7 +305,7 @@ class Transformer:
 '''torch_register and torch_apply'''
 
 
-def torch_register(template, target, sigmaR, eV, eL=0, eT=0, **kwargs):
+def torch_register(template, target, transformer, sigmaR, eV, eL=0, eT=0, **kwargs):
     """daniel's version for demo to be replaced
     Perform a registration between <template> and <target>.
     Supported kwargs [default value]:
@@ -338,19 +333,14 @@ def torch_register(template, target, sigmaR, eV, eL=0, eT=0, **kwargs):
         'nt':3, # number of time steps in velocity field           
         'order':2, # polynomial order
         'draw':False,
-        'xI':None,
-        'xJ':None,
+        'tune':False,
     }
     # Update parameters with kwargs.
     arguments.update(kwargs)
-    if torch.cuda.is_available():
-        device = 'cuda:0'
-    else:
-        device = 'cpu'
-    dtype = torch.float64
-        
-    transformer = Transformer(torch.tensor(template,dtype=dtype,device=device),
-                        torch.tensor(target,dtype=dtype,device=device),**arguments)
+    
+    device = transformer.device
+    dtype = transformer.dtype
+    
     if arguments['draw']:
         plt.ion()
         f1 = plt.figure()

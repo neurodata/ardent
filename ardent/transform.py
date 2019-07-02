@@ -2,7 +2,9 @@
 
 # import statements.
 import numpy as np
+import torch
 from .presets import get_registration_presets
+from .lddmm.transformer import Transformer
 from .lddmm.transformer import torch_register
 from .lddmm.transformer import torch_apply_transform
 from .io import save as io_save
@@ -25,7 +27,7 @@ class Transform():
         self.phiinvAinvs = None
         self.affine = None
 
-        self.transformer = None
+        self.transformer = None # To be instantiated in the register method.
     
     @staticmethod
     def _handle_registration_parameters(preset:str, params:dict) -> dict:
@@ -53,6 +55,7 @@ class Transform():
         'clarity'
         """
 
+
         # Collect registration parameters from chosen caller.
         registration_parameters = dict(sigmaR=sigmaR, eV=eV, eL=eL, eT=eT, **kwargs)
         registration_parameters = {key : value for key, value in registration_parameters.items() if value is not None}
@@ -60,12 +63,11 @@ class Transform():
         if preset is not None:
             registration_parameters = Transform._handle_registration_parameters(preset, registration_parameters)
 
-        # TODO: clean up this hotfix.
-        xI = [np.arange(nxyz_i)*dxyz_i - np.mean(np.arange(nxyz_i)*dxyz_i) for nxyz_i, dxyz_i in zip(template.shape, template_resolution)]
-        xJ = [np.arange(nxyz_i)*dxyz_i - np.mean(np.arange(nxyz_i)*dxyz_i) for nxyz_i, dxyz_i in zip(target.shape, target_resolution)]
-        registration_parameters.update(xI=xI, xJ=xJ)
+        # Instantiate transformer attribute if not already present.
+        if self.transformer is None:
+            self.transformer = Transformer(I=template, J=target, Ires=template_resolution, Jres=target_resolution)
 
-        outdict = torch_register(template, target, **registration_parameters)
+        outdict = torch_register(template, target, self.transformer, **registration_parameters)
         '''outdict contains:
             - phis
             - phiinvs
@@ -108,6 +110,9 @@ class Transform():
             'Aphis':self.Aphis,
             'phiinvAinvs':self.phiinvAinvs,
             'affine':self.affine
+
+            # Transformer attributes: A (affine) & v.
+            'v':self.transformer.v.cpu().numpy()
             }
         
         io_save(attribute_dict, file_path)
@@ -132,4 +137,8 @@ class Transform():
             self.Aphis = attribute_dict['Aphis']
             self.phiinvAinvs = attribute_dict['phiinvAinvs']
             self.affine = attribute_dict['affine']
+
+            # Update self.transformer.
+            self.transformer.A = torch.tensor(attribute_dict['affine'], dtype=self.transformer.dtype, device=self.transformer.device)
+            self.transformer.v = torch.tensor(attribute_dict['v'], dtype=self.transformer.dtype, device=self.transformer.device)
         
