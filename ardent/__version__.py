@@ -18,7 +18,6 @@ __version__ = "0.0.1"
 __author__ = "Devin Crowley"
 __author_email__ = "devin.g.crowley@gmail.com"
 __license__ = "Apache License 2.0"
-__copyright__ = "Copyright 2019 Devin Crowley"
 __min_python_version__ = (3, 6)
 __python_requires__ = ">={}.{}".format(*__min_python_version__)
 __classifiers__ = [
