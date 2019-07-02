@@ -28,6 +28,7 @@ class Transform():
         self.affine = None
 
         self.transformer = None # To be instantiated in the register method.
+        self.v = None # Attribute of self.transformer.
     
     @staticmethod
     def _handle_registration_parameters(preset:str, params:dict) -> dict:
@@ -63,9 +64,10 @@ class Transform():
         if preset is not None:
             registration_parameters = Transform._handle_registration_parameters(preset, registration_parameters)
 
-        # Instantiate transformer attribute if not already present.
-        if self.transformer is None:
-            self.transformer = Transformer(I=template, J=target, Ires=template_resolution, Jres=target_resolution)
+        # Instantiate transformer attribute with a new Transformer object.
+        # self.affine and self.v will not be None if this Transform object was read with its load method or if its register method was already called.
+        self.transformer = Transformer(I=template, J=target, Ires=template_resolution, Jres=target_resolution, A=self.affine, v=self.v)
+
 
         outdict = torch_register(template, target, self.transformer, **registration_parameters)
         '''outdict contains:
@@ -76,6 +78,7 @@ class Transform():
             - A
 
             - transformer
+            - v
         '''
 
         # Populate attributes.
@@ -86,6 +89,7 @@ class Transform():
         self.affine = outdict['A']
 
         self.transformer = outdict['transformer']
+        self.v = outdict['v']
 
 
     def apply_transform(self, subject:np.ndarray, deform_to="template", save_path=None) -> np.ndarray:
@@ -138,7 +142,5 @@ class Transform():
             self.phiinvAinvs = attribute_dict['phiinvAinvs']
             self.affine = attribute_dict['affine']
 
-            # Update self.transformer.
-            self.transformer.A = torch.tensor(attribute_dict['affine'], dtype=self.transformer.dtype, device=self.transformer.device)
-            self.transformer.v = torch.tensor(attribute_dict['v'], dtype=self.transformer.dtype, device=self.transformer.device)
-        
+            self.v = attribute_dict['v']
+            self.transformer = Transformer()

@@ -68,9 +68,13 @@ class Transformer:
         if v is None:
             self.v = torch.zeros((self.nt,3,self.nxI[0],self.nxI[1],self.nxI[2]),
                              dtype=self.dtype,device=self.device, requires_grad=usegrad)
+        else:
+            self.v = torch.tensor(v, dtype=self.dtype, device=self.device)
         self.vhat = torch.rfft(self.v,3,onesided=False)
         if A is None:
             self.A = torch.eye(4,dtype=self.dtype,device=self.device, requires_grad=usegrad)
+        else:
+            self.A = torch.tensor(A, dtype=self.dtype, device=self.device)
 
         # smoothing
         f0I = torch.arange(self.nxI[0],dtype=self.dtype,device=self.device)/self.dxI[0]/self.nxI[0]
@@ -403,7 +407,9 @@ def torch_register(template, target, transformer, sigmaR, eV, eL=0, eT=0, **kwar
         'phiinvs':transformer.phii.cpu().numpy(), 
         'phiinvAinvs':transformer.phiiAi.cpu().numpy(), 
         'A':transformer.A.cpu().numpy(), 
-        'transformer':transformer}
+        
+        'transformer':transformer, 
+        'v':transformer.v.cpu().numpy()}
 
 
 def torch_apply_transform(image:np.ndarray, deform_to='template', Aphis=None, phiinvAinvs=None, transformer=None):
