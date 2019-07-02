@@ -40,7 +40,7 @@ class Transform():
 
         return preset_parameters
 
-
+    # TODO: argument validation and resolution scalar to triple correction.
     def register(self, template:np.ndarray, target:np.ndarray, template_resolution=[1,1,1], target_resolution=[1,1,1],
         preset=None, sigmaR=None, eV=None, eL=None, eT=None, **kwargs) -> None:
         """Perform a registration using transformer between template and target. 
@@ -63,7 +63,7 @@ class Transform():
         # TODO: clean up this hotfix.
         xI = [np.arange(nxyz_i)*dxyz_i - np.mean(np.arange(nxyz_i)*dxyz_i) for nxyz_i, dxyz_i in zip(template.shape, template_resolution)]
         xJ = [np.arange(nxyz_i)*dxyz_i - np.mean(np.arange(nxyz_i)*dxyz_i) for nxyz_i, dxyz_i in zip(target.shape, target_resolution)]
-        # registration_parameters.update(xI=xI, xJ=xJ)
+        registration_parameters.update(xI=xI, xJ=xJ)
 
         outdict = torch_register(template, target, **registration_parameters)
         '''outdict contains:

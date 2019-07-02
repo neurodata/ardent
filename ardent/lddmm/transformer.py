@@ -31,6 +31,8 @@ class Transformer:
         if xI is None:
             xI = [torch.arange(I.shape[i],dtype=self.dtype,device=self.device) for i in range(3)]
             xI = [x - torch.mean(x) for x in xI]
+        else:
+            xI = [torch.tensor(xI_i, dtype=self.dtype, device=self.device) for xI_i in xI]
         self.xI = xI
         self.nxI = I.shape
         self.dxI = torch.tensor([xI[0][1]-xI[0][0], xI[1][1]-xI[1][0], xI[2][1]-xI[2][0]],
@@ -41,6 +43,8 @@ class Transformer:
         if xJ is None:
             xJ = [torch.arange(J.shape[i],dtype=self.dtype,device=self.device) for i in range(3)]
             xJ = [x - torch.mean(x) for x in xJ]
+        else:
+            xJ = [torch.tensor(xJ_i, dtype=self.dtype, device=self.device) for xJ_i in xJ]
         self.xJ = xJ
         self.nxJ = J.shape
         self.dxJ = torch.tensor([xJ[0][1]-xJ[0][0], xJ[1][1]-xJ[1][0], xJ[2][1]-xJ[2][0]],
