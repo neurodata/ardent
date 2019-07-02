@@ -108,7 +108,7 @@ class Transform():
         """Apply the transformation--computed by the last call to self.register--
         to <subject>, deforming it into the space of <deform_to>."""
 
-        deformed_subject = torch_apply_transform(image=subject, deform_to=deform_to, Aphis=self.Aphis, phiinvAinvs=self.phiinvAinvs, transformer=self.transformer)
+        deformed_subject = torch_apply_transform(image=subject, deform_to=deform_to, transformer=self.transformer)
         
         if save_path is not None:
             io_save(deformed_subject, save_path)
