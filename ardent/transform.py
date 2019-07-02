@@ -109,7 +109,7 @@ class Transform():
             'phiinvs':self.phiinvs,
             'Aphis':self.Aphis,
             'phiinvAinvs':self.phiinvAinvs,
-            'affine':self.affine
+            'affine':self.affine,
 
             # Transformer attributes: A (affine) & v.
             'v':self.transformer.v.cpu().numpy()
