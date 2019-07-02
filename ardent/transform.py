@@ -64,12 +64,15 @@ class Transform():
         if preset is not None:
             registration_parameters = Transform._handle_registration_parameters(preset, registration_parameters)
 
-        # Instantiate transformer attribute with a new Transformer object.
+        # Instantiate transformer as a new Transformer object.
         # self.affine and self.v will not be None if this Transform object was read with its load method or if its register method was already called.
-        self.transformer = Transformer(I=template, J=target, Ires=template_resolution, Jres=target_resolution, A=self.affine, v=self.v)
+        transformer = Transformer(I_shape=template.shape, J_shape=target.shape, Ires=template_resolution, Jres=target_resolution, A=self.affine, v=self.v)
+        """See WARNING in Transformer.__init__ for a confession of this heinousness."""
+        transformer.I = torch.tensor(template, dtype=transformer.dtype, device=transformer.device)
+        transformer.J = torch.tensor(target, dtype=transformer.dtype, device=transformer.device)
 
 
-        outdict = torch_register(template, target, self.transformer, **registration_parameters)
+        outdict = torch_register(template, target, transformer, **registration_parameters)
         '''outdict contains:
             - phis
             - phiinvs
@@ -79,6 +82,10 @@ class Transform():
 
             - transformer
             - v
+            - I_shape
+            - J_shape
+            - Ires
+            - Jres
         '''
 
         # Populate attributes.
@@ -88,8 +95,13 @@ class Transform():
         self.phiinvAinvs = outdict['phiinvAinvs']
         self.affine = outdict['A']
 
+        # Populate attributes of shame.
         self.transformer = outdict['transformer']
         self.v = outdict['v']
+        self.I_shape = outdict['I_shape']
+        self.J_shape = outdict['J_shape']
+        self.Ires = outdict['Ires']
+        self.Jres = outdict['Jres']
 
 
     def apply_transform(self, subject:np.ndarray, deform_to="template", save_path=None) -> np.ndarray:
@@ -115,8 +127,11 @@ class Transform():
             'phiinvAinvs':self.phiinvAinvs,
             'affine':self.affine,
 
-            # Transformer attributes: A (affine) & v.
-            'v':self.transformer.v.cpu().numpy()
+            'v':self.transformer.v.cpu().numpy(),
+            'I_shape':self.I_shape,
+            'J_shape':self.J_shape,
+            'Ires':self.Ires,
+            'Jres':self.Jres,
             }
         
         io_save(attribute_dict, file_path)
@@ -143,4 +158,8 @@ class Transform():
             self.affine = attribute_dict['affine']
 
             self.v = attribute_dict['v']
-            self.transformer = Transformer()
+            self.I_shape = attribute_dict['I_shape']
+            self.J_shape = attribute_dict['J_shape']
+            self.Ires = attribute_dict['Ires']
+            self.Jres = attribute_dict['Jres']
+            self.transformer = Transformer(I_shape=I_shape, J_shape=J_shape, Ires=Ires, Jres=Jres, A=self.affine, v=self.v)

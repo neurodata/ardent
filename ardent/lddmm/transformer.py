@@ -7,7 +7,7 @@ import torch
 from matplotlib import pyplot as plt
 
 class Transformer:
-    def __init__(self,I,J, Ires, Jres,
+    def __init__(self,I_shape,J_shape, Ires, Jres,
                  nt=5,a=2.0,p=2.0,
                  sigmaM=1.0,sigmaR=1.0,
                  order=2,
@@ -20,26 +20,35 @@ class Transformer:
         
         assume input images are and gridpoints are torch tensors already
         '''
+
+        """WARNING: I am about to do something really dreadful. I am replacing I and J, the first two positional arguments here, with I_shape and J_shape.
+        The assumption is that the I and J attributes will be set manually immediately following instantiation in the register method.
+        Also adjusted: I.shape & J.shape --> I_shape & J_shape, two instances each herein."""
+        self.I_shape = I_shape
+        self.J_shape = J_shape
+        self.Ires = Ires
+        self.Jres = Jres
+
         if torch.cuda.is_available():
             self.device = 'cuda:0'
         else:
             self.device = 'cpu'
         self.dtype = torch.float64
         
-        self.I = torch.tensor(I, dtype=self.dtype, device=self.device)
-        xI = [np.arange(nxyz_i)*dxyz_i - np.mean(np.arange(nxyz_i)*dxyz_i) for nxyz_i, dxyz_i in zip(I.shape, Ires)] # Create coords as a list of numpy arrays.
+        # self.I = torch.tensor(I, dtype=self.dtype, device=self.device)
+        xI = [np.arange(nxyz_i)*dxyz_i - np.mean(np.arange(nxyz_i)*dxyz_i) for nxyz_i, dxyz_i in zip(I_shape, Ires)] # Create coords as a list of numpy arrays.
         xI = [torch.tensor(xI_i, dtype=self.dtype, device=self.device) for xI_i in xI] # Convert to lists of tensors.
         self.xI = xI
-        self.nxI = I.shape
+        self.nxI = I_shape
         self.dxI = torch.tensor([xI[0][1]-xI[0][0], xI[1][1]-xI[1][0], xI[2][1]-xI[2][0]],
                                 dtype=self.dtype,device=self.device)
         self.XI = torch.stack(torch.meshgrid(xI))
         
-        self.J = torch.tensor(J, dtype=self.dtype, device=self.device)
-        xJ = [np.arange(nxyz_i)*dxyz_i - np.mean(np.arange(nxyz_i)*dxyz_i) for nxyz_i, dxyz_i in zip(J.shape, Jres)] # Create coords as a list of numpy arrays.
+        # self.J = torch.tensor(J, dtype=self.dtype, device=self.device)
+        xJ = [np.arange(nxyz_i)*dxyz_i - np.mean(np.arange(nxyz_i)*dxyz_i) for nxyz_i, dxyz_i in zip(J_shape, Jres)] # Create coords as a list of numpy arrays.
         xJ = [torch.tensor(xJ_i, dtype=self.dtype, device=self.device) for xJ_i in xJ] # Convert to lists of tensors.
         self.xJ = xJ
-        self.nxJ = J.shape
+        self.nxJ = J_shape
         self.dxJ = torch.tensor([xJ[0][1]-xJ[0][0], xJ[1][1]-xJ[1][0], xJ[2][1]-xJ[2][0]],
                                 dtype=self.dtype,device=self.device)
         self.XJ = torch.stack(torch.meshgrid(xJ))
@@ -407,12 +416,17 @@ def torch_register(template, target, transformer, sigmaR, eV, eL=0, eT=0, **kwar
         'phiinvs':transformer.phii.cpu().numpy(), 
         'phiinvAinvs':transformer.phiiAi.cpu().numpy(), 
         'A':transformer.A.cpu().numpy(), 
-        
+
         'transformer':transformer, 
-        'v':transformer.v.cpu().numpy()}
+        'v':transformer.v.cpu().numpy()
+        'I_shape':transformer.I_shape,
+        'J_shape':transformer.J_shape,
+        'Ires':transformer.Ires,
+        'Jres':transformer.Jres,
+        }
 
 
-def torch_apply_transform(image:np.ndarray, deform_to='template', Aphis=None, phiinvAinvs=None, transformer=None):
+def torch_apply_transform(image:np.ndarray, deform_to='template', transformer=None):
     """daniel's version for demo to be replaced
     Apply the transformation stored in Aphis (for deforming to the template) and phiinvAinvs (for deforming to the target).
     If deform_to='template', Aphis must be provided.
@@ -420,7 +434,7 @@ def torch_apply_transform(image:np.ndarray, deform_to='template', Aphis=None, ph
     # Presently must be given transformer.
     if transformer is None:
         raise RuntimeError("transformer must be provided with present implementation.")
-        
+
     if deform_to == 'template':
         out = transformer.interp3(transformer.xJ,torch.tensor(image,dtype=transformer.dtype,device=transformer.device),transformer.Aphi)
     elif deform_to == 'target':
