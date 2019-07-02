@@ -98,10 +98,10 @@ class Transform():
         # Populate attributes of shame.
         self.transformer = outdict['transformer']
         self.v = outdict['v']
-        self.I_shape = outdict['I_shape']
-        self.J_shape = outdict['J_shape']
-        self.Ires = outdict['Ires']
-        self.Jres = outdict['Jres']
+        self.I_shape = np.array(outdict['I_shape'])
+        self.J_shape = np.array(outdict['J_shape'])
+        self.Ires = np.array(outdict['Ires'])
+        self.Jres = np.array(outdict['Jres'])
 
 
     def apply_transform(self, subject:np.ndarray, deform_to="template", save_path=None) -> np.ndarray:
