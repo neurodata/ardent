@@ -1,6 +1,7 @@
 import numpy as np
 import SimpleITK as sitk
 from pathlib import Path
+import pickle
 
 def _validate_inputs(**kwargs):
     """Accepts arbitrary kwargs. If recognized, they are validated.
