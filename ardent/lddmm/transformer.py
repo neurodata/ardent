@@ -24,16 +24,17 @@ class Transformer:
         If transformer is not None (assumed to be a Transformer instance), 
         its A and v attributes are used, unless they are provided as arguments.
         '''
-        self.I = I
-        self.J = J
-        self.Ires = Ires
-        self.Jres = Jres
 
         if torch.cuda.is_available():
             self.device = 'cuda:0'
         else:
             self.device = 'cpu'
         self.dtype = torch.float64
+        
+        self.I = torch.tensor(I, dtype=self.dtype, device=self.device)
+        self.J = torch.tensor(J, dtype=self.dtype, device=self.device)
+        self.Ires = Ires
+        self.Jres = Jres
         
         # self.I = torch.tensor(I, dtype=self.dtype, device=self.device)
         xI = [np.arange(nxyz_i)*dxyz_i - np.mean(np.arange(nxyz_i)*dxyz_i) for nxyz_i, dxyz_i in zip(I.shape, Ires)] # Create coords as a list of numpy arrays.
