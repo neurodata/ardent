@@ -78,7 +78,7 @@ class Transformer:
         if v is not None:
             self.v = torch.tensor(v, dtype=self.dtype, device=self.device)
         elif transformer is not None:
-            if hasattr(transformer, 'v')
+            if hasattr(transformer, 'v'):
                 self.v = transformer.v
             else:
                 # TODO: fix redundant code.
