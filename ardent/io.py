@@ -43,7 +43,7 @@ def _validate_inputs(**kwargs):
 
 
 def save(data, file_path):
-    """Save data to file_path."""
+    """Save data to file_path. Accepts a np.ndarray or a dictionary mapping to np.ndarrays."""
     # Validate inputs.
     inputs = {'data':data, 'file_path':file_path}
     validated_inputs = _validate_inputs(**inputs)
@@ -59,6 +59,7 @@ def save(data, file_path):
         data_Image = sitk.GetImageFromArray(data) # Side effect: breaks alias.
         # Save data to file_path.
         sitk.WriteImage(data_Image, str(file_path))
+    # If data is a dictionary it must map to np.ndarray objects.
     elif isinstance(data, dict):
         np.savez(file_path.with_suffix(''), **data) # '.npz' is appended.
     else:
@@ -68,7 +69,7 @@ def save(data, file_path):
 
 
 def load(file_path):
-    """Load data from file_path."""
+    """Load data from file_path. Expects a np.ndarray or a dictionary mapping to np.ndarrays."""
 
     # Validate inputs.
     inputs = {'file_path':file_path}
@@ -88,3 +89,24 @@ def load(file_path):
         data = data.T
         # data is a np.ndarray.
         return data
+
+
+def save_pickled(obj, file_path):
+    """Save pickled obj to file_path."""
+
+    # Validate file_path.
+    file_path = _validate_inputs(file_path=file_path)['file_path']
+
+    with open(file_path, 'wb') as file:
+        pickle.dump(obj, file)
+
+
+def load_pickled(file_path):
+    """Load pickled obj from file_path."""
+
+    # Validate file_path.
+    file_path = _validate_inputs(file_path=file_path)['file_path']
+
+    # TODO: verify behavior of suffixes.
+    with open(file_path, 'rb') as file:
+        return pickle.load(file)

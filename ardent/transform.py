@@ -7,9 +7,11 @@ from .presets import get_registration_presets
 from .lddmm.transformer import Transformer
 from .lddmm.transformer import torch_register
 from .lddmm.transformer import torch_apply_transform
-from .io import save as io_save
-# TODO: rename io as fileio.
+# TODO: rename io as fileio to avoid conflict with standard library package io?
+# from .io import save as io_save
+from . import io
 from pathlib import Path
+import pickle
 
 class Transform():
     """transform stores the deformation that is output by a registration 
@@ -28,7 +30,6 @@ class Transform():
         self.affine = None
 
         self.transformer = None # To be instantiated in the register method.
-        self.v = None # Attribute of self.transformer.
     
     @staticmethod
     def _handle_registration_parameters(preset:str, params:dict) -> dict:
@@ -45,7 +46,8 @@ class Transform():
 
     # TODO: argument validation and resolution scalar to triple correction.
     def register(self, template:np.ndarray, target:np.ndarray, template_resolution=[1,1,1], target_resolution=[1,1,1],
-        preset=None, sigmaR=None, eV=None, eL=None, eT=None, **kwargs) -> None:
+        preset=None, sigmaR=None, eV=None, eL=None, eT=None, 
+        A=None, v=None, **kwargs) -> None:
         """Perform a registration using transformer between template and target. 
         Populates attributes for future calls to the apply_transform method.
         
@@ -66,11 +68,8 @@ class Transform():
 
         # Instantiate transformer as a new Transformer object.
         # self.affine and self.v will not be None if this Transform object was read with its load method or if its register method was already called.
-        transformer = Transformer(I_shape=template.shape, J_shape=target.shape, Ires=template_resolution, Jres=target_resolution, A=self.affine, v=self.v)
-        """See WARNING in Transformer.__init__ for a confession of this heinousness."""
-        transformer.I = torch.tensor(template, dtype=transformer.dtype, device=transformer.device)
-        transformer.J = torch.tensor(target, dtype=transformer.dtype, device=transformer.device)
-
+        transformer = Transformer(I=template, J=target, Ires=template_resolution, Jres=target_resolution, 
+                                    transformer=self.transformer, A=A, v=v)
 
         outdict = torch_register(template, target, transformer, **registration_parameters)
         '''outdict contains:
@@ -81,11 +80,6 @@ class Transform():
             - A
 
             - transformer
-            - v
-            - I_shape
-            - J_shape
-            - Ires
-            - Jres
         '''
 
         # Populate attributes.
@@ -95,13 +89,7 @@ class Transform():
         self.phiinvAinvs = outdict['phiinvAinvs']
         self.affine = outdict['A']
 
-        # Populate attributes of shame.
         self.transformer = outdict['transformer']
-        self.v = outdict['v']
-        self.I_shape = np.array(outdict['I_shape'])
-        self.J_shape = np.array(outdict['J_shape'])
-        self.Ires = np.array(outdict['Ires'])
-        self.Jres = np.array(outdict['Jres'])
 
 
     def apply_transform(self, subject:np.ndarray, deform_to="template", save_path=None) -> np.ndarray:
@@ -111,55 +99,20 @@ class Transform():
         deformed_subject = torch_apply_transform(image=subject, deform_to=deform_to, transformer=self.transformer)
         
         if save_path is not None:
-            io_save(deformed_subject, save_path)
+            io.save(deformed_subject, save_path)
 
         return deformed_subject
 
     
     def save(self, file_path):
-        """Saves the following attributes to file_path: phis, phiinvs, Aphis, phiinvAinvs, & A.
-        The file is saved in .npz format."""
+        """Saves the entire self object instance to file."""
 
-        attribute_dict = {
-            'phis':self.phis,
-            'phiinvs':self.phiinvs,
-            'Aphis':self.Aphis,
-            'phiinvAinvs':self.phiinvAinvs,
-            'affine':self.affine,
+        io.save_pickled(self, file_path)
 
-            'v':self.transformer.v.cpu().numpy(),
-            'I_shape':self.I_shape,
-            'J_shape':self.J_shape,
-            'Ires':self.Ires,
-            'Jres':self.Jres,
-            }
-        
-        io_save(attribute_dict, file_path)
 
     def load(self, file_path):
-        """Loads the following attributes from file_path: phis, phiinvs, Aphis, phiinvAinvs, & A.
-        Presently they can only be accessed. This is not sufficient to run apply_transform 
-        without first running register."""
+        """Loads an entire object instance from memory and transplants all of its writeable attributes into self."""
 
-        # Validate file_path.
-        file_path = Path(file_path)
-        if not file_path.suffix:
-            file_path = file_path.with_suffix('.npz')
-        elif file_path.suffix != '.npz':
-            raise ValueError(f"file_path may not have an extension other than .npz.\n"
-                f"file_path.suffix: {file_path.suffix}.")
-        # file_path is appropriate.
+        transform = io.load_pickled(file_path)
 
-        with np.load(file_path) as attribute_dict:
-            self.phis = attribute_dict['phis']
-            self.phiinvs = attribute_dict['phiinvs']
-            self.Aphis = attribute_dict['Aphis']
-            self.phiinvAinvs = attribute_dict['phiinvAinvs']
-            self.affine = attribute_dict['affine']
-
-            self.v = attribute_dict['v']
-            self.I_shape = attribute_dict['I_shape']
-            self.J_shape = attribute_dict['J_shape']
-            self.Ires = attribute_dict['Ires']
-            self.Jres = attribute_dict['Jres']
-            self.transformer = Transformer(I_shape=I_shape, J_shape=J_shape, Ires=Ires, Jres=Jres, A=self.affine, v=self.v)
+        self.__dict__.update(transform.__dict__)
