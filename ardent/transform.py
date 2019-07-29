@@ -77,7 +77,7 @@ class Transform():
         self.affine = outdict['A']
 
         self.transformer = outdict['transformer']
-
+    
 
     def apply_transform(self, subject:np.ndarray, deform_to="template", save_path=None) -> np.ndarray:
         """Apply the transformation--computed by the last call to self.register--
