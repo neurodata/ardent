@@ -78,8 +78,8 @@ def test__validate_ndarray__raises(kwargs, expeced_exception, match):
     (dict(value=(1, 2, 3), size=3, dtype=int), np.array([1, 2, 3], int)),
     (dict(value=np.array([1, 2, 3], float), size=3, dtype=int), np.array([1, 2, 3], int)),
 ])
-def test__validate_scaler_to_multi__correct(kwargs, correct_output):
-    assert np.array_equal(_validate_scaler_to_multi(**kwargs), correct_output)
+def test__validate_scalar_to_multi__correct(kwargs, correct_output):
+    assert np.array_equal(_validate_scalar_to_multi(**kwargs), correct_output)
 
 
 @pytest.mark.parametrize("kwargs, expected_exception, match", [
@@ -90,9 +90,9 @@ def test__validate_scaler_to_multi__correct(kwargs, correct_output):
     (dict(value=[1, 2, 'c'], size=3, dtype=int), ValueError, "value and dtype are incompatible with one another."),
     (dict(value='c', size=3, dtype=int), ValueError, "value and dtype are incompatible with one another."),
 ])
-def test__validate_scaler_to_multi__raises(kwargs, expected_exception, match):
+def test__validate_scalar_to_multi__raises(kwargs, expected_exception, match):
     with pytest.raises(expected_exception, match=match):
-        _validate_scaler_to_multi(**kwargs)
+        _validate_scalar_to_multi(**kwargs)
 
 # Test _validate_xyz_resolution.
 
