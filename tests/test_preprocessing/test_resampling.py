@@ -5,7 +5,7 @@ from scipy.interpolate import interpn
 
 from ardent.preprocessing.resampling import _resample
 from ardent.preprocessing.resampling import _validate_ndarray
-from ardent.preprocessing.resampling import _validate_scaler_to_multi
+from ardent.preprocessing.resampling import _validate_scalar_to_multi
 from ardent.preprocessing.resampling import _validate_xyz_resolution
 from ardent.preprocessing.resampling import _compute_coords
 from ardent.preprocessing.resampling import _downsample_along_axis
