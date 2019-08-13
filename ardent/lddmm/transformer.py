@@ -7,40 +7,47 @@ import torch
 from matplotlib import pyplot as plt
 
 class Transformer:
-    def __init__(self,I,J,
-                 xI=None,xJ=None,
+    def __init__(self,I,J, Ires, Jres,
                  nt=5,a=2.0,p=2.0,
                  sigmaM=1.0,sigmaR=1.0,
                  order=2,
                  sigmaA=None,
-                 **kwargs):
+                 transformer=None, 
+                 A=None, v=None):
         '''
         Specify polynomial intensity mapping order with order parameters
         2 corresponds to linear, nothing less than 2 is supported
         input sigmaA for weights
         
         assume input images are and gridpoints are torch tensors already
+
+        If transformer is not None (assumed to be a Transformer instance), 
+        its A and v attributes are used, unless they are provided as arguments.
         '''
+
         if torch.cuda.is_available():
             self.device = 'cuda:0'
         else:
             self.device = 'cpu'
         self.dtype = torch.float64
         
-        self.I = I
-        if xI is None:
-            xI = [torch.arange(I.shape[i],dtype=self.dtype,device=self.device) for i in range(3)]
-            xI = [x - torch.mean(x) for x in xI]
+        self.I = torch.tensor(I, dtype=self.dtype, device=self.device)
+        self.J = torch.tensor(J, dtype=self.dtype, device=self.device)
+        self.Ires = Ires
+        self.Jres = Jres
+        
+        # self.I = torch.tensor(I, dtype=self.dtype, device=self.device)
+        xI = [np.arange(nxyz_i)*dxyz_i - np.mean(np.arange(nxyz_i)*dxyz_i) for nxyz_i, dxyz_i in zip(I.shape, Ires)] # Create coords as a list of numpy arrays.
+        xI = [torch.tensor(xI_i, dtype=self.dtype, device=self.device) for xI_i in xI] # Convert to lists of tensors.
         self.xI = xI
         self.nxI = I.shape
         self.dxI = torch.tensor([xI[0][1]-xI[0][0], xI[1][1]-xI[1][0], xI[2][1]-xI[2][0]],
                                 dtype=self.dtype,device=self.device)
         self.XI = torch.stack(torch.meshgrid(xI))
         
-        self.J = J
-        if xJ is None:
-            xJ = [torch.arange(J.shape[i],dtype=self.dtype,device=self.device) for i in range(3)]
-            xJ = [x - torch.mean(x) for x in xJ]
+        # self.J = torch.tensor(J, dtype=self.dtype, device=self.device)
+        xJ = [np.arange(nxyz_i)*dxyz_i - np.mean(np.arange(nxyz_i)*dxyz_i) for nxyz_i, dxyz_i in zip(J.shape, Jres)] # Create coords as a list of numpy arrays.
+        xJ = [torch.tensor(xJ_i, dtype=self.dtype, device=self.device) for xJ_i in xJ] # Convert to lists of tensors.
         self.xJ = xJ
         self.nxJ = J.shape
         self.dxJ = torch.tensor([xJ[0][1]-xJ[0][0], xJ[1][1]-xJ[1][0], xJ[2][1]-xJ[2][0]],
@@ -68,11 +75,32 @@ class Transformer:
         self.Esave = []
         
         usegrad = False # typically way too much memory
-        self.v = torch.zeros((self.nt,3,self.nxI[0],self.nxI[1],self.nxI[2]),
-                             dtype=self.dtype,device=self.device, requires_grad=usegrad)
+
+        if v is not None:
+            self.v = torch.tensor(v, dtype=self.dtype, device=self.device)
+        elif transformer is not None:
+            if hasattr(transformer, 'v'):
+                self.v = transformer.v
+            else:
+                # TODO: fix redundant code.
+                self.v = torch.zeros((self.nt,3,self.nxI[0],self.nxI[1],self.nxI[2]),
+                        dtype=self.dtype,device=self.device, requires_grad=usegrad)
+        else:
+            self.v = torch.zeros((self.nt,3,self.nxI[0],self.nxI[1],self.nxI[2]),
+                        dtype=self.dtype,device=self.device, requires_grad=usegrad)
         self.vhat = torch.rfft(self.v,3,onesided=False)
-        self.A = torch.eye(4,dtype=self.dtype,device=self.device, requires_grad=usegrad)
         
+        if A is not None:
+            self.A = torch.tensor(A, dtype=self.dtype, device=self.device)
+        elif transformer is not None:
+            if hasattr(transformer, 'A'):
+                self.A = transformer.A
+            else:
+                # TODO: fix redundant code.
+                self.A = torch.eye(4,dtype=self.dtype,device=self.device, requires_grad=usegrad)
+        else:
+            self.A = torch.eye(4,dtype=self.dtype,device=self.device, requires_grad=usegrad)
+
         # smoothing
         f0I = torch.arange(self.nxI[0],dtype=self.dtype,device=self.device)/self.dxI[0]/self.nxI[0]
         f1I = torch.arange(self.nxI[1],dtype=self.dtype,device=self.device)/self.dxI[1]/self.nxI[1]
@@ -306,7 +334,7 @@ class Transformer:
 '''torch_register and torch_apply'''
 
 
-def torch_register(template, target, sigmaR, eV, eL=0, eT=0, **kwargs):
+def torch_register(template, target, transformer, sigmaR, eV, eL=0, eT=0, **kwargs):
     """daniel's version for demo to be replaced
     Perform a registration between <template> and <target>.
     Supported kwargs [default value]:
@@ -324,6 +352,7 @@ def torch_register(template, target, sigmaR, eV, eL=0, eT=0, **kwargs):
         'a':2, # smoothing kernel, scaled to pixel size
         'p':2,
         'niter':200,
+        'naffine':50, 
         'eV':eV, # velocity
         'eL':eL, # linear
         'eT':eT, # translation
@@ -333,31 +362,29 @@ def torch_register(template, target, sigmaR, eV, eL=0, eT=0, **kwargs):
         'nt':3, # number of time steps in velocity field           
         'order':2, # polynomial order
         'draw':False,
-        'xI':None,
-        'xJ':None,
+        'tune':False,
     }
     # Update parameters with kwargs.
     arguments.update(kwargs)
-    if torch.cuda.is_available():
-        device = 'cuda:0'
-    else:
-        device = 'cpu'
-    dtype = torch.float64
-        
-    transformer = Transformer(torch.tensor(template,dtype=dtype,device=device),
-                        torch.tensor(target,dtype=dtype,device=device),**arguments)
+    
+    device = transformer.device
+    dtype = transformer.dtype
+    
     if arguments['draw']:
         plt.ion()
         f1 = plt.figure()
         f2 = plt.figure()
         if arguments['sigmaA'] is not None:
             f3 = plt.figure()
+    vmaxsave = [] # for visualization, maximum velocity
+    Lsave = [] # for visualization, linear transform
+    Tsave = [] # for visualizatoin, translation
     for it in range(arguments['niter']):
         transformer.forward()
         transformer.cost()
         if arguments['sigmaA'] is not None:
             transformer.weights()
-        if it >=0 and arguments['eV']>-1.0:
+        if it >= arguments['naffine'] and arguments['eV']>-1.0:
             transformer.step_v(eV=arguments['eV'])
         transformer.step_A(eT=arguments['eT'],eL=arguments['eL'])
         
@@ -373,7 +400,6 @@ def torch_register(template, target, sigmaR, eV, eL=0, eT=0, **kwargs):
             ax.plot(Esave)
             ax.legend(['ER','EM','E'])
             f1.canvas.draw()
-
             
             plt.close(f2)
             f2 = plt.figure()
@@ -388,8 +414,37 @@ def torch_register(template, target, sigmaR, eV, eL=0, eT=0, **kwargs):
                 f3.canvas.draw()
                 
             plt.pause(0.0001)
-        print(f'Completed iteration {it}, E={transformer.Esave[-1]}, EM={transformer.EMsave[-1]}, ER={transformer.ERsave[-1]}')
             
+        vmax = (torch.max(torch.sum(transformer.v.detach()**2, dim=1))**0.5).cpu().numpy()
+        vmaxsave.append(vmax)
+        L = transformer.A[:3,:3].detach().cpu().numpy()
+        Lsave.append(L)
+        T = transformer.A[:3,-1].detach().cpu().numpy()
+        Tsave.append(T)
+        print(f'Completed iteration {it}, E={transformer.Esave[-1]}, EM={transformer.EMsave[-1]}, ER={transformer.ERsave[-1]}')
+        
+    # Display final images.
+    if arguments['tune']:
+        f, axs = plt.subplots(2,2)
+        axs[0,0].plot(list(zip(transformer.Esave,transformer.EMsave,transformer.ERsave)))
+        xlim = axs[0,0].get_xlim()
+        ylim = axs[0,0].get_ylim()
+        axs[0,0].set_aspect((xlim[1]-xlim[0])/(ylim[1]-ylim[0]))
+        axs[0,0].legend(['Etot','Ematch','Ereg'])
+        axs[0,0].set_title('Energy minimization')
+        
+        axs[0,1].plot(Tsave)
+        axs[0,1].set_title('Translation')
+        axs[0,1].legend(['x0','x1','x2'])
+        
+        axs[1,0].plot( np.array(Lsave).reshape((-1,9)) )
+        axs[1,0].set_title('Linear')
+        
+        
+        axs[1,1].plot(vmaxsave)
+        axs[1,1].set_title('Maximum velocity')
+        
+        
     
     return {
         'Aphis':transformer.Aphi.cpu().numpy(), 
@@ -397,10 +452,11 @@ def torch_register(template, target, sigmaR, eV, eL=0, eT=0, **kwargs):
         'phiinvs':transformer.phii.cpu().numpy(), 
         'phiinvAinvs':transformer.phiiAi.cpu().numpy(), 
         'A':transformer.A.cpu().numpy(), 
-        'transformer':transformer}
+        'transformer':transformer, 
+        }
 
 
-def torch_apply_transform(image:np.ndarray, deform_to='template', Aphis=None, phiinvAinvs=None, transformer=None):
+def torch_apply_transform(image:np.ndarray, deform_to='template', transformer=None):
     """daniel's version for demo to be replaced
     Apply the transformation stored in Aphis (for deforming to the template) and phiinvAinvs (for deforming to the target).
     If deform_to='template', Aphis must be provided.
@@ -408,7 +464,7 @@ def torch_apply_transform(image:np.ndarray, deform_to='template', Aphis=None, ph
     # Presently must be given transformer.
     if transformer is None:
         raise RuntimeError("transformer must be provided with present implementation.")
-        
+
     if deform_to == 'template':
         out = transformer.interp3(transformer.xJ,torch.tensor(image,dtype=transformer.dtype,device=transformer.device),transformer.Aphi)
     elif deform_to == 'target':
