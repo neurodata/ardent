@@ -77,9 +77,9 @@ def correct_bias_field(image, xyz_resolution, scale=0.25, **kwargs):
         maximumNumberOfIterations=[50, 50, 50, 50], 
         biasFieldFullWidthAtHalfMaximum=0.15, 
         wienerFilterNoise=0.01, 
-        numberOfHistogramBins=200u,
+        numberOfHistogramBins=200,
         numberOfControlPoints=[4, 4, 4], 
-        splineOrder=3u, 
+        splineOrder=3, 
         useMaskLabel=True, 
         maskLabel=1, 
     )
@@ -107,22 +107,45 @@ def remove_grid_artifact(image, z_axis=1, sigma=10, mask=None):
     elif mask == 'Otsu':
         sitk_Image_mask = sitk.OtsuThreshold(sitk.GetImageFromArray(image))
         mask = sitk.GetArrayFromImage(sitk_Image_mask)
-
+        
     masked_image = image * mask
 
     # Shift masked_image above 1.
-    min_value = np.min(masked_image)
-    masked_image = masked_image - min_value + 1
+#     min_value = np.min(masked_image)
+#     masked_image = masked_image - min_value + 1
+
+    print(np.any(np.isnan(masked_image)))
 
     # Compute masked average.
-    mean_across_z = np.average(masked_image, axis=z_axis, weights=mask)
+    mean_across_z = np.average(masked_image, axis=z_axis)
+    # Correct for the zero-valued elements included in the above average.
+    z_mask_sum = np.sum(mask, axis=z_axis)
+    mean_across_z *= masked_image.shape[z_axis] / np.where(z_mask_sum != 0, z_mask_sum, 1)
+    np.nan_to_num(mean_across_z, copy=False, nan=0)
+    
+    print(np.any(np.isnan(mean_across_z)))
 
     bias_z_projection = gaussian_filter(mean_across_z, sigma) / mean_across_z
+    bias_z_projection[ np.isinf(bias_z_projection) ] = 1.0
+    
+#     print(np.any(np.isnan(bias_z_projection)))
+    print(np.any(np.isinf(bias_z_projection)))
+    
     bias_z_image = np.expand_dims(bias_z_projection, z_axis)
+    
+#     print(np.any(np.isnan(bias_z_image)))
+#     print(np.any(np.isnan(masked_image)))
+#     print(masked_image.shape, bias_z_image.shape)
+    
+#     print(masked_image)
+#     print(bias_z_image)
 
     corrected_masked_image = masked_image * bias_z_image
+    
+    print(corrected_masked_image.shape)
+    print(np.any(np.isnan(corrected_masked_image)))
 
     # Shift corrected_masked_image to account for the initial shift.
-    corrected_masked_image = corrected_masked_image + min_value - 1
+#     corrected_masked_image = corrected_masked_image + min_value - 1
 
     return corrected_masked_image
