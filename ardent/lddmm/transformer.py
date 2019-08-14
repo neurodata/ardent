@@ -376,6 +376,9 @@ def torch_register(template, target, transformer, sigmaR, eV, eL=0, eT=0, **kwar
         f2 = plt.figure()
         if arguments['sigmaA'] is not None:
             f3 = plt.figure()
+    vmaxsave = [] # for visualization, maximum velocity
+    Lsave = [] # for visualization, linear transform
+    Tsave = [] # for visualizatoin, translation
     for it in range(arguments['niter']):
         transformer.forward()
         transformer.cost()
@@ -397,7 +400,6 @@ def torch_register(template, target, transformer, sigmaR, eV, eL=0, eT=0, **kwar
             ax.plot(Esave)
             ax.legend(['ER','EM','E'])
             f1.canvas.draw()
-
             
             plt.close(f2)
             f2 = plt.figure()
@@ -412,7 +414,15 @@ def torch_register(template, target, transformer, sigmaR, eV, eL=0, eT=0, **kwar
                 f3.canvas.draw()
                 
             plt.pause(0.0001)
-        print(f'Completed iteration {it}, E={transformer.Esave[-1]}, EM={transformer.EMsave[-1]}, ER={transformer.ERsave[-1]}')
+            
+        vmax = (torch.max(torch.sum(transformer.v.detach()**2, dim=1))**0.5).cpu().numpy()
+        vmaxsave.append(vmax)
+        L = transformer.A[:3,:3].detach().cpu().numpy()
+        Lsave.append(L)
+        T = transformer.A[:3,-1].detach().cpu().numpy()
+        Tsave.append(T)
+        if not it % 10:
+            print(f'Completed iteration {it}, E={transformer.Esave[-1]}, EM={transformer.EMsave[-1]}, ER={transformer.ERsave[-1]}')
         
     # Display final images.
     if arguments['tune']:
@@ -424,7 +434,18 @@ def torch_register(template, target, transformer, sigmaR, eV, eL=0, eT=0, **kwar
         axs[0,0].legend(['Etot','Ematch','Ereg'])
         axs[0,0].set_title('Energy minimization')
         
-        vmax = (torch.max(torch.sum(transformer.v**2, dim=1))**0.5).cpu().numpy()
+        axs[0,1].plot(Tsave)
+        axs[0,1].set_title('Translation')
+        axs[0,1].legend(['x0','x1','x2'])
+        
+        axs[1,0].plot( np.array(Lsave).reshape((-1,9)) )
+        axs[1,0].set_title('Linear')
+        
+        
+        axs[1,1].plot(vmaxsave)
+        axs[1,1].set_title('Maximum velocity')
+        
+        
     
     return {
         'Aphis':transformer.Aphi.cpu().numpy(), 
@@ -432,7 +453,6 @@ def torch_register(template, target, transformer, sigmaR, eV, eL=0, eT=0, **kwar
         'phiinvs':transformer.phii.cpu().numpy(), 
         'phiinvAinvs':transformer.phiiAi.cpu().numpy(), 
         'A':transformer.A.cpu().numpy(), 
-
         'transformer':transformer, 
         }
 
