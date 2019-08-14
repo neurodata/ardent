@@ -1,3 +1,5 @@
+import pytest
+
 import numpy as np
 
 from ardent.utilities import _validate_scalar_to_multi
