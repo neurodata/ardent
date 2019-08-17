@@ -448,8 +448,8 @@ def torch_register(template, target, transformer, sigmaR, eV, eL=0, eT=0, **kwar
         
     
     return {
-        'Aphis':transformer.Aphi.cpu().numpy(), 
-        'phis':transformer.phi.cpu().numpy(), 
+        'Aphis':transformer.Aphi.cpu().numpy() if hasattr(transformer, 'Aphi') else None, 
+        'phis':transformer.phi.cpu().numpy() if hasattr(transformer, 'Aphi') else None, 
         'phiinvs':transformer.phii.cpu().numpy(), 
         'phiinvAinvs':transformer.phiiAi.cpu().numpy(), 
         'A':transformer.A.cpu().numpy(), 

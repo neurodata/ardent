@@ -69,7 +69,7 @@ class Transform():
         # Instantiate transformer as a new Transformer object.
         # self.affine and self.v will not be None if this Transform object was read with its load method or if its register method was already called.
         transformer = Transformer(I=template, J=target, Ires=template_resolution, Jres=target_resolution, 
-                                    transformer=self.transformer, A=A, v=v)
+                                    transformer=self.transformer, sigmaR=registration_parameters['sigmaR'], A=A, v=v)
 
         outdict = torch_register(template, target, transformer, **registration_parameters)
         '''outdict contains:
