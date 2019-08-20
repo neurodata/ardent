@@ -7,7 +7,7 @@ def _verify_data_is_ndarray(data):
         raise TypeError(f"data must be of type np.ndarray.\ntype(data): {type(data)}.")
 
 
-def cast_to_typed_array(data, dtype=float): pass
+def cast_to_typed_array(data, dtype=float):
     """Returns a copy of data cast as a np.ndarray of type dtype."""
 
     data = _validate_ndarray(data, dtype=dtype)
