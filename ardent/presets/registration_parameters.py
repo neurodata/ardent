@@ -1,10 +1,11 @@
 preset_parameters = {}
 
-# identity preset.
-preset_parameters.update({'identity' : dict(sigmaR=0, eV=0, eL=0, eT=0, naffine=0, niter=1)})
-
-# clarity preset.
-preset_parameters.update({'clarity' : dict(sigmaR=1e1, eV=5e-1, eL=2e-8, eT=2e-5)})
+# Define registration parameter presets.
+preset_parameters.update({'identity'          : dict(eT=0,    eL=0,     eV=0,    sigmaR=0, naffine=0, niter=1)})
+preset_parameters.update({'nissl, mouse'      : dict(eT=2e-9, eL=1e-13, eV=1e-3, sigmaR=1e0)})
+preset_parameters.update({'mri, human'        : dict(eT=1e-9, eL=1e-12, eV=5e-4, sigmaR=1e0)})
+preset_parameters.update({'clarity, mouse'    : dict(eT=5e-7, eL=1e-9,  eV=2e0,  sigmaR=5e1)})
+# preset_parameters.update({'clarity' : dict(sigmaR=1e1, eV=5e-1, eL=2e-8, eT=2e-5)}) # TODO: remove deprecated 'clarity' preset.
 
 
 def get_registration_presets():
