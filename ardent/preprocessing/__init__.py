@@ -1,3 +1,4 @@
+from .normalization import cast_to_typed_array
 from .normalization import normalize_by_MAD
 from .normalization import center_to_mean
 from .normalization import pad
@@ -8,9 +9,14 @@ from .resampling import change_resolution_by
 
 # TODO: update preprocessing_functions.
 preprocessing_functions = [
-    'normalize_by_MAD', 
-    'center_to_mean', 
+    'cast_to_typed_array',
+    'normalize_by_MAD',
+    'center_to_mean',
     'pad',
+
+    'downsample_image',
+    'change_resolution_to',
+    'change_resolution_by',
     ]
 
 """
@@ -21,10 +27,24 @@ import numpy as np
 
 # TODO: incorporate arguments.
 def preprocess(data:(np.ndarray, list), processes:list):
-    """Given data and a list of processes from the preprocessing subpackage, 
-    perform all such processes on data in the order provided and return the result.
+    """
+    Perform each preprocessing function in <processes>, in the order listed, 
+    on the np.ndarray <data>, or on each np.ndarray in <data> if <data> is a list.
     
-    data can be either a np.ndarray or list of np.ndarrays."""
+    Arguments:
+        data {np.ndarray, list} -- The array or list of arrays to be preprocessed.
+        processes {list} -- A list of strings, each of which must be the name of a function imported in this module.
+    
+    Raises:
+        TypeError: If <data> is a list, each element must be of type np.ndarray.
+        TypeError: <data> must be of type np.ndarray or of type list.
+        ValueError: <processes> must be castable as a string-type np.ndarray.
+        ValueError: Each element of <processes> must be the name of a function imported in this module.
+    
+    Returns:
+        np.ndarray, list -- The result of applying each function listed in <processes>
+        in the order provided to the array <data>, or to each element of <data> if <data> is a list of arrays.
+    """
 
     # Verify data.
     if isinstance(data, list):
@@ -43,9 +63,6 @@ def preprocess(data:(np.ndarray, list), processes:list):
     except ValueError:
         raise ValueError(f"processes could not be cast to a string-type np.ndarray.\n"
             f"processes: {processes}.")
-    if not isinstance(processes, np.ndarray):
-        raise TypeError(f"processes must be a type that can be cast to a np.ndarray of strings.\n"
-            f"type(processes): {type(processes)}.")
     
     # Process each np.ndarray.
     # If data was passed in as a single np.ndarray, 

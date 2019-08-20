@@ -1,13 +1,21 @@
 import numpy as np
 
+from ardent.utilities import _validate_ndarray
+
 def _verify_data_is_ndarray(data):
     if not isinstance(data, np.ndarray):
         raise TypeError(f"data must be of type np.ndarray.\ntype(data): {type(data)}.")
 
 
+def cast_to_typed_array(data, dtype=float): pass
+    """Returns a copy of data cast as a np.ndarray of type dtype."""
+
+    data = _validate_ndarray(data, dtype=dtype)
+
+
 def normalize_by_MAD(data):
     """Returns a copy of <data> divided by its mean absolute deviation."""
-
+    
     _verify_data_is_ndarray(data)
 
     mean_absolute_deviation = np.mean(np.abs(data - np.median(data)))
