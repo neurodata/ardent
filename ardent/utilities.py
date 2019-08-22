@@ -56,9 +56,9 @@ def _validate_scalar_to_multi(value, size=3, dtype=float):
     return value
 
 
-def _validate_ndarray(input, minimum_ndim=0, required_ndim=None, dtype=None, 
+def _validate_ndarray(array, minimum_ndim=0, required_ndim=None, dtype=None, 
 forbid_object_dtype=True, broadcast_to_shape=None):
-    """Cast (a copy of) input to a np.ndarray if possible and return it 
+    """Cast (a copy of) array to a np.ndarray if possible and return it 
     unless it is noncompliant with minimum_ndim, required_ndim, and dtype.
     
     Note:
@@ -66,13 +66,13 @@ forbid_object_dtype=True, broadcast_to_shape=None):
     If required_ndim is None, _validate_ndarray will accept any object.
     If it is possible to cast to dtype, otherwise an exception is raised.
 
-    If np.array(input).ndim == 0 and required_ndim == 1, input will be upcast to ndim 1.
+    If np.array(array).ndim == 0 and required_ndim == 1, array will be upcast to ndim 1.
     
     If forbid_object_dtype == True and the dtype is object, an exception is raised 
     unless object is the dtype.
     
     If a shape is provided to broadcast_to_shape, unless noncompliance is found with 
-    required_ndim, input is broadcasted to that shape."""
+    required_ndim, array is broadcasted to that shape."""
 
     # Verify arguments.
 
@@ -99,41 +99,41 @@ forbid_object_dtype=True, broadcast_to_shape=None):
             raise TypeError(f"dtype must be either None or a valid type."
                 f"type(dtype): {type(dtype)}.")
 
-    # Validate input.
+    # Validate array.
 
-    # Cast input to np.ndarray.
+    # Cast array to np.ndarray.
     # Validate compliance with dtype.
     try:
-        input = np.array(input, dtype) # Side effect: breaks alias.
+        array = np.array(array, dtype) # Side effect: breaks alias.
     except TypeError:
-        raise TypeError(f"input is of a type that is incompatible with dtype.\n"
-            f"type(input): {type(input)}, dtype: {dtype}.")
+        raise TypeError(f"array is of a type that is incompatible with dtype.\n"
+            f"type(array): {type(array)}, dtype: {dtype}.")
     except ValueError:
-        raise ValueError(f"input has a value that is incompatible with dtype.\n"
-            f"input: {input}, \ntype(input): {type(input)}, dtype: {dtype}.")
+        raise ValueError(f"array has a value that is incompatible with dtype.\n"
+            f"array: {array}, \ntype(array): {type(array)}, dtype: {dtype}.")
 
     # Verify compliance with forbid_object_dtype.
     if forbid_object_dtype:
-        if input.dtype == object and dtype != object:
-            raise TypeError(f"Casting input to a np.ndarray produces an array of dtype object while forbid_object_dtype == True and dtype != object.")
+        if array.dtype == object and dtype != object:
+            raise TypeError(f"Casting array to a np.ndarray produces an array of dtype object while forbid_object_dtype == True and dtype != object.")
 
     # Validate compliance with required_ndim.
-    if required_ndim is not None and input.ndim != required_ndim:
+    if required_ndim is not None and array.ndim != required_ndim:
         # Upcast from ndim 0 to ndim 1 if appropriate.
-        if input.ndim == 0 and required_ndim == 1:
-            input = np.array([input])
+        if array.ndim == 0 and required_ndim == 1:
+            array = np.array([array])
         else:
-            raise ValueError(f"If required_ndim is not None, input.ndim must equal it unless input.ndim == 0 and required_ndin == 1.\n"
-                f"input.ndim: {input.ndim}, required_ndim: {required_ndim}.")
+            raise ValueError(f"If required_ndim is not None, array.ndim must equal it unless array.ndim == 0 and required_ndin == 1.\n"
+                f"array.ndim: {array.ndim}, required_ndim: {required_ndim}.")
 
     # Verify compliance with minimum_ndim.
-    if input.ndim < minimum_ndim:
-        raise ValueError(f"input.ndim must be at least equal to minimum_ndim."
-            f"input.ndim: {input.ndim}, minimum_ndim: {minimum_ndim}.")
+    if array.ndim < minimum_ndim:
+        raise ValueError(f"array.ndim must be at least equal to minimum_ndim."
+            f"array.ndim: {array.ndim}, minimum_ndim: {minimum_ndim}.")
     
-    # Broadcast input if appropriate.
+    # Broadcast array if appropriate.
     if broadcast_to_shape is not None:
-        input = np.copy(np.broadcast_to(array=input, shape=broadcast_to_shape))
+        array = np.copy(np.broadcast_to(array=array, shape=broadcast_to_shape))
 
-    return input
+    return array
 

@@ -75,6 +75,6 @@ def preprocess(data:(np.ndarray, list), processes:list):
                 raise ValueError(f"Process {process} not recognized.\n"
                     f"Recognized processes: {preprocessing_functions}.")
 
-    # Return in a form appropriate to what was passed in.
-    # i.e. list in, list out, np.ndarray in, np.ndarray out, empty list in, None out.
-    return data if len(data) > 1 else data[0] if len(data) == 1 else None
+    # Return in a form appropriate to what was passed in, 
+    # i.e. list in, list out, np.ndarray in, np.ndarray out.
+    return data[0] if isinstance(data, list) and len(data) == 1 else data

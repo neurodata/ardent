@@ -383,3 +383,6 @@ truncate=False, return_true_resolution=False, **resample_kwargs):
 
 # TODO: isolate negative scale conversion into its own function.
 # TODO: merge necessary new_shape transformations etc. into _resample.
+
+# TODO: recreate bug from quick_demo and test it into oblivion.
+# TODO: implement to_this_shape user-level resampling function.

@@ -87,19 +87,19 @@ def test__validate_ndarray():
 
     # Test proper use.
 
-    kwargs = dict(input=np.arange(3, dtype=int), dtype=float)
+    kwargs = dict(array=np.arange(3, dtype=int), dtype=float)
     correct_output = np.arange(3, dtype=float)
     assert np.array_equal(_validate_ndarray(**kwargs), correct_output)
 
-    kwargs = dict(input=[[0,1,2], [3,4,5]], dtype=float)
+    kwargs = dict(array=[[0,1,2], [3,4,5]], dtype=float)
     correct_output = np.arange(2*3, dtype=float).reshape(2,3)
     assert np.array_equal(_validate_ndarray(**kwargs), correct_output)
 
-    kwargs = dict(input=np.array([0,1,2]), broadcast_to_shape=(2,3))
+    kwargs = dict(array=np.array([0,1,2]), broadcast_to_shape=(2,3))
     correct_output = np.array([[0,1,2], [0,1,2]])
     assert np.array_equal(_validate_ndarray(**kwargs), correct_output)
 
-    kwargs = dict(input=np.array(7), required_ndim=1)
+    kwargs = dict(array=np.array(7), required_ndim=1)
     correct_output = np.array([7])
     assert np.array_equal(_validate_ndarray(**kwargs), correct_output)
 
@@ -107,65 +107,65 @@ def test__validate_ndarray():
 
     # Validate arguments.
 
-    kwargs = dict(input=np.arange(3), minimum_ndim=1.5)
+    kwargs = dict(array=np.arange(3), minimum_ndim=1.5)
     expected_exception = TypeError
     match = "minimum_ndim must be of type int."
     with pytest.raises(expected_exception, match=match):
         _validate_ndarray(**kwargs)
 
-    kwargs = dict(input=np.arange(3), minimum_ndim=-1)
+    kwargs = dict(array=np.arange(3), minimum_ndim=-1)
     expected_exception = ValueError
     match = "minimum_ndim must be non-negative."
     with pytest.raises(expected_exception, match=match):
         _validate_ndarray(**kwargs)
 
-    kwargs = dict(input=np.arange(3), required_ndim=1.5)
+    kwargs = dict(array=np.arange(3), required_ndim=1.5)
     expected_exception = TypeError
     match = "required_ndim must be either None or of type int."
     with pytest.raises(expected_exception, match=match):
         _validate_ndarray(**kwargs)
 
-    kwargs = dict(input=np.arange(3), required_ndim=-1)
+    kwargs = dict(array=np.arange(3), required_ndim=-1)
     expected_exception = ValueError
     match = "required_ndim must be non-negative."
     with pytest.raises(expected_exception, match=match):
         _validate_ndarray(**kwargs)
 
-    kwargs = dict(input=np.arange(3), dtype="not of type type")
+    kwargs = dict(array=np.arange(3), dtype="not of type type")
     expected_exception = TypeError
     match = "dtype must be either None or a valid type."
     with pytest.raises(expected_exception, match=match):
         _validate_ndarray(**kwargs)
     
-    # Validate input.
+    # Validate array.
 
-    kwargs = dict(input=np.array(print), dtype=int)
+    kwargs = dict(array=np.array(print), dtype=int)
     expected_exception = TypeError
-    match = "input is of a type that is incompatible with dtype."
+    match = "array is of a type that is incompatible with dtype."
     with pytest.raises(expected_exception, match=match):
         _validate_ndarray(**kwargs)
 
-    kwargs = dict(input=np.array('string that is not an int'), dtype=int)
+    kwargs = dict(array=np.array('string that is not an int'), dtype=int)
     expected_exception = ValueError
-    match = "input has a value that is incompatible with dtype."
+    match = "array has a value that is incompatible with dtype."
     with pytest.raises(expected_exception, match=match):
         _validate_ndarray(**kwargs)
     
-    kwargs = dict(input=np.array([[], 1]), dtype=None, forbid_object_dtype=True)
+    kwargs = dict(array=np.array([[], 1]), dtype=None, forbid_object_dtype=True)
     expected_exception = TypeError
-    match = "Casting input to a np.ndarray produces an array of dtype object while forbid_object_dtype == True and dtype != object."
+    match = "Casting array to a np.ndarray produces an array of dtype object while forbid_object_dtype == True and dtype != object."
     with pytest.raises(expected_exception, match=match):
         _validate_ndarray(**kwargs)
 
-    kwargs = dict(input=np.arange(3), required_ndim=2)
+    kwargs = dict(array=np.arange(3), required_ndim=2)
     expected_exception = ValueError
-    match = "If required_ndim is not None, input.ndim must equal it unless input.ndim == 0 and required_ndin == 1."
+    match = "If required_ndim is not None, array.ndim must equal it unless array.ndim == 0 and required_ndin == 1."
     with pytest.raises(expected_exception, match=match):
         _validate_ndarray(**kwargs)
 
-    kwargs = dict(input=np.arange(3), minimum_ndim=2)
+    kwargs = dict(array=np.arange(3), minimum_ndim=2)
     expected_exception = ValueError
-    match = "input.ndim must be at least equal to minimum_ndim."
+    match = "array.ndim must be at least equal to minimum_ndim."
     with pytest.raises(expected_exception, match=match):
         _validate_ndarray(**kwargs)
 
