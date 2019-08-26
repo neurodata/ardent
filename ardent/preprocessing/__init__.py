@@ -70,10 +70,11 @@ def preprocess(data:(np.ndarray, list), processes:list):
     for data_index, datum in enumerate(data):
         for process in processes:
             if process in preprocessing_functions:
-                data[data_index] = eval(f"{process}(datum)")
+                datum = eval(f"{process}(datum)")
             else:
                 raise ValueError(f"Process {process} not recognized.\n"
                     f"Recognized processes: {preprocessing_functions}.")
+        data[data_index] = datum
 
     # Return in a form appropriate to what was passed in, 
     # i.e. list in, list out, np.ndarray in, np.ndarray out.
