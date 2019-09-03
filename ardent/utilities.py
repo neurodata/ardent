@@ -1,3 +1,14 @@
+"""
+Defines:
+    Functions:
+        _validate_scalar_to_multi(value, size=3, dtype=float)
+        _validate_ndarray(array, minimum_ndim=0, required_ndim=None, dtype=None, 
+            forbid_object_dtype=True, broadcast_to_shape=None)
+        _validate_xyz_resolution(ndim, xyz_resolution)
+        _compute_axes(shape, xyz_resolution=1, origin='center')
+        _compute_coords(shape, xyz_resolution=1, origin='center')
+"""
+
 import numpy as np
 
 def _validate_scalar_to_multi(value, size=3, dtype=float):
