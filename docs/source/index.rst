@@ -4,7 +4,7 @@
    contain the root `toctree` directive.
 
 ARDENT_: Image Registration Abstracted
-=====================================
+======================================
 
 .. _ARDENT: https://github.com/neurodata/ardent
 
