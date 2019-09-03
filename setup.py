@@ -23,7 +23,7 @@ def check_python_version():
 check_python_version()
 
 setup(
-    name=version_info['__title__'],
+    name=version_info['__name__'],
     description=version_info['__description__'],
     long_description=README,
     long_description_content_type='text/markdown',
