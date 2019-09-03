@@ -3,108 +3,14 @@ import pytest
 import numpy as np
 from scipy.interpolate import interpn
 
-from ardent.preprocessing.resampling import _validate_xyz_resolution
-from ardent.preprocessing.resampling import _compute_axes
-from ardent.preprocessing.resampling import _compute_coords
+from ardent.utilities import _validate_xyz_resolution
+from ardent.utilities import _compute_axes
+from ardent.utilities import _compute_coords
 from ardent.preprocessing.resampling import _resample
 from ardent.preprocessing.resampling import _downsample_along_axis
 from ardent.preprocessing.resampling import downsample_image
 from ardent.preprocessing.resampling import change_resolution_to
 from ardent.preprocessing.resampling import change_resolution_by
-
-"""
-Test _validate_xyz_resolution.
-"""
-
-def test__validate_xyz_resolution():
-
-    # Test proper use.
-    
-    kwargs = dict(ndim=1, xyz_resolution=2)
-    correct_output = np.full(1, 2, float)
-    assert np.array_equal(_validate_xyz_resolution(**kwargs), correct_output)
-
-    kwargs = dict(ndim=4, xyz_resolution=1.5)
-    correct_output = np.full(4, 1.5, float)
-    assert np.array_equal(_validate_xyz_resolution(**kwargs), correct_output)
-
-    kwargs = dict(ndim=3, xyz_resolution=np.ones(3, int))
-    correct_output = np.ones(3, float)
-    assert np.array_equal(_validate_xyz_resolution(**kwargs), correct_output)
-
-    kwargs = dict(ndim=2, xyz_resolution=[3, 4])
-    correct_output = np.array([3, 4], float)
-    assert np.array_equal(_validate_xyz_resolution(**kwargs), correct_output)
-
-    # Test improper use.
-
-    kwargs = dict(ndim=2, xyz_resolution=[3, -4])
-    expected_exception = ValueError
-    match = "All elements of xyz_resolution must be positive."
-    with pytest.raises(expected_exception, match=match):
-        _validate_xyz_resolution(**kwargs)
-
-    kwargs = dict(ndim=2, xyz_resolution=[3, 0])
-    expected_exception = ValueError
-    match = "All elements of xyz_resolution must be positive."
-    with pytest.raises(expected_exception, match=match):
-        _validate_xyz_resolution(**kwargs)
-
-"""
-Test _compute_axes.
-"""
-
-def test__compute_axes():
-
-    # Test proper use.
-
-    # _compute_axes produces a list with a np.ndarray for each element in shape.
-
-    kwargs = dict(shape=(0, 1, 2), xyz_resolution=1, origin='center')
-    correct_output = [np.arange(dim_size) * dim_res - np.mean(np.arange(dim_size) * dim_res) 
-        for dim_size, dim_res in zip((0, 1, 2), (1, 1, 1))]
-    for dim, coord in enumerate(_compute_axes(**kwargs)):
-        assert np.array_equal(coord, correct_output[dim])
-
-    kwargs = dict(shape=(1, 2, 3, 4), xyz_resolution=1.5, origin='center')
-    correct_output = [np.arange(dim_size) * dim_res - np.mean(np.arange(dim_size) * dim_res) 
-        for dim_size, dim_res in zip((1, 2, 3, 4), (1.5, 1.5, 1.5, 1.5))]
-    for dim, coord in enumerate(_compute_axes(**kwargs)):
-        assert np.array_equal(coord, correct_output[dim])
-
-    kwargs = dict(shape=(2, 3, 4), xyz_resolution=[1, 1.5, 2], origin='center')
-    correct_output = [np.arange(dim_size) * dim_res - np.mean(np.arange(dim_size) * dim_res) 
-        for dim_size, dim_res in zip((2, 3, 4), (1, 1.5, 2))]
-    for dim, coord in enumerate(_compute_axes(**kwargs)):
-        assert np.array_equal(coord, correct_output[dim])
-
-    kwargs = dict(shape=5, xyz_resolution=1, origin='center')
-    correct_output = [np.arange(dim_size) * dim_res - np.mean(np.arange(dim_size) * dim_res) 
-        for dim_size, dim_res in zip((5,), (1,))]
-    for dim, coord in enumerate(_compute_axes(**kwargs)):
-        assert np.array_equal(coord, correct_output[dim])
-
-    kwargs = dict(shape=5, xyz_resolution=1, origin='zero')
-    correct_output = [np.arange(dim_size) * dim_res
-        for dim_size, dim_res in zip((5,), (1,))]
-    for dim, coord in enumerate(_compute_axes(**kwargs)):
-        assert np.array_equal(coord, correct_output[dim])
-
-"""
-Test _compute_coords.
-"""
-
-def test__compute_coords():
-
-    # Test proper use.
-
-    kwargs = dict(shape=5, xyz_resolution=1, origin='center')
-    correct_output = np.array([[-2], [-1], [0], [1], [2]])
-    assert np.array_equal(_compute_coords(**kwargs), correct_output)
-
-    kwargs = dict(shape=(3,4), xyz_resolution=1, origin='zero')
-    correct_output = np.array([[[0,0], [0,1], [0,2], [0,3]], [[1,0], [1,1], [1,2], [1,3]], [[2,0], [2,1], [2,2], [2,3]]])
-    assert np.array_equal(_compute_coords(**kwargs), correct_output)
 
 """
 Test _resample.

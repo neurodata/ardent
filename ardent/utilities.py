@@ -1,9 +1,5 @@
 import numpy as np
 
-"""
-Test _validate_scalar_to_multi
-"""
-
 def _validate_scalar_to_multi(value, size=3, dtype=float):
     """
     If value's length is 1, upcast it to match size. 
@@ -137,3 +133,57 @@ forbid_object_dtype=True, broadcast_to_shape=None):
 
     return array
 
+def _validate_xyz_resolution(ndim, xyz_resolution):
+    """Validate xyz_resolution to assure its length matches the dimensionality of image."""
+
+    xyz_resolution = _validate_scalar_to_multi(xyz_resolution, size=ndim)
+
+    if np.any(xyz_resolution <= 0):
+        raise ValueError(f"All elements of xyz_resolution must be positive.\n"
+            f"np.min(xyz_resolution): {np.min(xyz_resolution)}.")
+
+    return xyz_resolution
+
+
+def _compute_axes(shape, xyz_resolution=1, origin='center'):
+    """Returns the real_axes defining an image with the given shape 
+    at the given resolution as a list of numpy arrays.
+    """
+
+    # Validate shape.
+    shape = _validate_ndarray(shape, dtype=int, required_ndim=1)
+
+    # Validate xyz_resolution.
+    xyz_resolution = _validate_xyz_resolution(len(shape), xyz_resolution)
+
+    # Create axes.
+
+    # axes is a list of arrays matching each shape element from shape, spaced by the corresponding xyz_resolution.
+    axes = [np.arange(dim_size) * dim_res for dim_size, dim_res in zip(shape, xyz_resolution)]
+
+    # List all presently recognized origin values.
+    origins = ['center', 'zero']
+
+    if origin == 'center':
+        # Center each axes array to its mean.
+        for xyz_index, axis in enumerate(axes):
+            axes[xyz_index] -= np.mean(axis)
+    elif origin == 'zero':
+        # Allow each axis to increase from 0 along each dimension.
+        pass
+    else:
+        raise NotImplementedError(f"origin must be one of these supported values: {origins}.\n"
+            f"origin: {origin}.")
+    
+    return axes
+
+
+def _compute_coords(shape, xyz_resolution=1, origin='center'):
+    """Returns the real_coordinates of an image with the given shape 
+    at the given resolution as a single numpy array of shape (*shape, len(shape))."""
+
+    axes = _compute_axes(shape, xyz_resolution, origin)
+
+    meshes = np.meshgrid(*axes, indexing='ij')
+
+    return np.stack(meshes, axis=-1)
