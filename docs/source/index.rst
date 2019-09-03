@@ -3,8 +3,22 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-ARDENT: Image Registration Abstracted
+ARDENT_: Image Registration Abstracted
 =====================================
+
+.. _ARDENT: https://github.com/neurodata/ardent
+
+ARDENT is a high-level nonlinear image registration package.
+
+Free software
+-------------
+
+ARDENT is free software; you can redistribute and/or modify it 
+under the terms of the :doc:`Apache-2.0 </license>`. We welcome contributions.
+Join us on `GitHub <https://github.com/neurodata/ardent>`.
+
+Documentation
+=============
 
 .. toctree::
    :maxdepth: 2
