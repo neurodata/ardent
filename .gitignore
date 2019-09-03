@@ -13,4 +13,6 @@ env/
 # VS Code
 .vscode/
 
-docs/build
+docs/_build
+
+venv
