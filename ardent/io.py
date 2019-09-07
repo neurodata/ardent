@@ -44,7 +44,16 @@ def _validate_inputs(**kwargs):
 
 
 def save(data, file_path):
-    """Save data to file_path. Accepts a np.ndarray or a dictionary mapping to np.ndarrays."""
+    """
+    Save data to file_path.
+    
+    Arguments:
+        data {(np.ndarray, dict)} -- An array or a dictionary with np.ndarray values to be saved.
+        file_path {(str, Path)} -- The file path that data will be saved to. Accepts an arbitrary suffix but provides .vtk by default.
+    
+    Raises:
+        Exception: Raised if _validate_inputs has failed to catch an improper type for data.
+    """
     # Validate inputs.
     inputs = {'data':data, 'file_path':file_path}
     validated_inputs = _validate_inputs(**inputs)
@@ -70,7 +79,15 @@ def save(data, file_path):
 
 
 def load(file_path):
-    """Load data from file_path. Expects a np.ndarray or a dictionary mapping to np.ndarrays."""
+    """
+    Load data from file_path.
+    
+    Arguments:
+        file_path {(str, Path)} -- The file path from which data will be retrieved.
+    
+    Returns:
+        (np.ndarray, dict) -- The array or dict of arrays saved at file_path.
+    """
 
     # Validate inputs.
     inputs = {'file_path':file_path}
@@ -93,7 +110,13 @@ def load(file_path):
 
 
 def save_pickled(obj, file_path):
-    """Save pickled obj to file_path."""
+    """
+    Pickle object obj and save it to file_path.
+    
+    Arguments:
+        obj {object} -- The pickleable object to be saved.
+        file_path {(str, Path)} -- The file path at which to save obj.
+    """
 
     # Validate file_path.
     file_path = _validate_inputs(file_path=file_path)['file_path']
@@ -103,7 +126,15 @@ def save_pickled(obj, file_path):
 
 
 def load_pickled(file_path):
-    """Load pickled obj from file_path."""
+    """
+    Load pickled obj from file_path.
+    
+    Arguments:
+        file_path {(str, Path)} -- The file path at which a pickled object is saved.
+    
+    Returns:
+        object -- The pickled object saved at file_path.
+    """
 
     # Validate file_path.
     file_path = _validate_inputs(file_path=file_path)['file_path']
