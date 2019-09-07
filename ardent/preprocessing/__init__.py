@@ -28,22 +28,21 @@ import numpy as np
 # TODO: incorporate arguments.
 def preprocess(data:(np.ndarray, list), processes:list):
     """
-    Perform each preprocessing function in <processes>, in the order listed, 
-    on the np.ndarray <data>, or on each np.ndarray in <data> if <data> is a list.
+    Perform each preprocessing function in processes, in the order listed, 
+    on data if it is an array, or on each element in data if it is a list of arrays.
     
     Arguments:
-        data {np.ndarray, list} -- The array or list of arrays to be preprocessed.
-        processes {list} -- A list of strings, each of which must be the name of a function imported in this module.
+        data {(np.ndarray, list)} -- The array or list of arrays to be preprocessed.
+        processes {list} -- The list of strings, each corresponding to the name of a preprocessing function.
     
     Raises:
-        TypeError: If <data> is a list, each element must be of type np.ndarray.
-        TypeError: <data> must be of type np.ndarray or of type list.
-        ValueError: <processes> must be castable as a string-type np.ndarray.
-        ValueError: Each element of <processes> must be the name of a function imported in this module.
+        TypeError: Raised if data is a list whose elements are not all of type np.ndarray.
+        TypeError: Raised if data is neither a np.ndarray or a list of np.ndarrays.
+        ValueError: Raised if processes cannot be cast to a np.ndarray with dtype str.
+        ValueError: Raised if any element of processes is not a recognized preprocessing function.
     
     Returns:
-        np.ndarray, list -- The result of applying each function listed in <processes>
-        in the order provided to the array <data>, or to each element of <data> if <data> is a list of arrays.
+        (np.ndarray, list) -- A copy of data after having each function in processes applied.
     """
 
     # Verify data.
