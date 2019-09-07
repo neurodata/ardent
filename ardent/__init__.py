@@ -1,10 +1,10 @@
-import .transform
-import .io
-import .visualization
+import ardent.transform
+import ardent.io
+import ardent.visualization
 
-import .lddmm
-import .preprocessing
-import .presets
+import ardent.lddmm
+import ardent.preprocessing
+import ardent.presets
 
 
 
