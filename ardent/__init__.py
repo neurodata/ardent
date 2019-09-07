@@ -1,3 +1,13 @@
+import .transform
+import .io
+import .visualization
+
+import .lddmm
+import .preprocessing
+import .presets
+
+
+
 from . import lddmm # Subpackage.
 
 from .transform import Transform # Class.
