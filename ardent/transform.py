@@ -155,7 +155,6 @@ class Transform():
         io.save_pickled(self, file_path)
 
 
-        """Loads an entire object instance from memory and transplants all of its writeable attributes into self."""
     def load(self, file_path):
         """
         Load an entire instance of a Transform object from memory, as from a file created with the save method, 
