@@ -13,7 +13,7 @@ class Transformer:
                  order=2,
                  sigmaA=None,
                  transformer=None, 
-                 A=None, v=None):
+                 A=None, v=None, device=None):
         '''
         Specify polynomial intensity mapping order with order parameters
         2 corresponds to linear, nothing less than 2 is supported
@@ -25,10 +25,13 @@ class Transformer:
         its A and v attributes are used, unless they are provided as arguments.
         '''
 
-        if torch.cuda.is_available():
-            self.device = 'cuda:0'
+        if 'cuda' in device or device == 'cpu':
+            self.device = device
         else:
-            self.device = 'cpu'
+            if torch.cuda.is_available():
+                self.device = 'cuda:0'
+            else:
+                self.device = 'cpu'
         self.dtype = torch.float64
         
         self.I = torch.tensor(I, dtype=self.dtype, device=self.device)
@@ -107,7 +110,7 @@ class Transformer:
         f2I = torch.arange(self.nxI[2],dtype=self.dtype,device=self.device)/self.dxI[2]/self.nxI[2]
         F0I,F1I,F2I = torch.meshgrid(f0I, f1I, f2I)
         self.a = a
-        self.p = p
+        self.p = p # fourier_high_pass_filter_power
         Lhat = (1.0 - self.a**2*( (-2.0 + 2.0*torch.cos(2.0*np.pi*self.dxI[0]*F0I))/self.dxI[0]**2 
                 + (-2.0 + 2.0*torch.cos(2.0*np.pi*self.dxI[1]*F1I))/self.dxI[1]**2
                 + (-2.0 + 2.0*torch.cos(2.0*np.pi*self.dxI[2]*F2I))/self.dxI[2]**2 ) )**self.p
