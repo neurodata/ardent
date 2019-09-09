@@ -4,7 +4,7 @@ presets
 registration_parameters
 -----------------------
 
-.. currentmodule:: ardent.registration_parameters
+.. currentmodule:: ardent.preprocessing.registration_parameters
 
 
 
@@ -17,7 +17,7 @@ registration_parameters
 batch_preprocessing
 -------------------
 
-.. currentmodule:: ardent.batch_preprocessing
+.. currentmodule:: ardent.preprocessing.batch_preprocessing
 
 
 
