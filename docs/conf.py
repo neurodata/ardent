@@ -24,8 +24,8 @@ author = "Devin Crowley"
 
 # The full version, including alpha/beta/rc tags
 
-import ardent
-version = ardent.__version__.__version__
+from ardent import __version__
+version = __version__.__version__
 release = version
 
 # -- General configuration ---------------------------------------------------
@@ -53,7 +53,7 @@ templates_path = ["_templates"]
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = []
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "**.ipynb_checkpoints"]
 
 autosummary_generate = True
 
