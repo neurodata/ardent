@@ -56,7 +56,7 @@ class Transform():
     # TODO: argument validation and resolution scalar to triple correction.
     def register(self, template:np.ndarray, target:np.ndarray, template_resolution=[1,1,1], target_resolution=[1,1,1], 
         preset=None, sigmaR=None, eV=None, eL=None, eT=None, 
-        A=None, v=None, device=None**kwargs) -> None:
+        A=None, v=None, device=None, **kwargs) -> None:
         """
         Perform a registration using transformer between template and target.
         Populates attributes for future calls to the apply_transform method.
