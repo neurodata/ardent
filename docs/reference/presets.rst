@@ -4,21 +4,10 @@ presets
 registration_parameters
 -----------------------
 
-.. currentmodule:: ardent.presets.registration_parameters
-
-
-
-.. autofunction:: get_registration_presets
-
-.. autofunction:: get_registration_preset
-
-
+.. automodule:: ardent.presets.registration_parameters
 
 batch_preprocessing
 -------------------
 
-.. currentmodule:: ardent.presets.batch_preprocessing
+.. automodule:: ardent.presets.batch_preprocessing
 
-
-
-.. autofunction:: basic_preprocessing
