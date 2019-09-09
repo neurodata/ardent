@@ -24,8 +24,9 @@ author = "Devin Crowley"
 
 # The full version, including alpha/beta/rc tags
 
-release = "0.0.1"
-version = "0.0.1"
+import ardent
+version = ardent.__version__.__version__
+release = version
 
 # -- General configuration ---------------------------------------------------
 
@@ -61,6 +62,13 @@ autoclass_content = "both"
 autodoc_default_flags = ["members", "inherited-members"]
 autodoc_member_order = "bysource"  # default is alphabetical
 
+# -- sphinx.ext.intersphinx
+intersphinx_mapping = {
+    "numpy": ("https://docs.scipy.org/doc/numpy", None),
+    "python": ("https://docs.python.org/3", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy/reference", None),
+    "sklearn": ("http://scikit-learn.org/dev", None),
+}
 
 # -- sphinx options ----------------------------------------------------------
 source_suffix = ".rst"
