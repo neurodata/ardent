@@ -5,6 +5,8 @@ transform
 
 
 
+.. autoclass:: Transform
+
 .. autofunction:: register
 
 .. autofunction:: apply_transform
