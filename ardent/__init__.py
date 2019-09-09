@@ -1,13 +1,3 @@
-import ardent.transform
-import ardent.io
-import ardent.visualization
-
-import ardent.lddmm
-import ardent.preprocessing
-import ardent.presets
-
-
-
 from . import lddmm # Subpackage.
 
 from .transform import Transform # Class.
