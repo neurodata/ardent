@@ -4,14 +4,14 @@ preprocessing
 batch preprocessing
 -------------------
 
-.. automodule ardent.preprocessing.__init__
+.. automodule:: ardent.preprocessing.__init__
 
 resampling
 ----------
 
-.. automodule ardent.preprocessing.resampling
+.. automodule:: ardent.preprocessing.resampling
 
 normalization
 -------------
 
-.. automodule ardent.preprocessing.normalization
+.. automodule:: ardent.preprocessing.normalization

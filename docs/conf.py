@@ -39,6 +39,7 @@ extensions = [
     "sphinx.ext.todo",
     "sphinx.ext.viewcode",
     "sphinx.ext.mathjax",
+    "sphinx.ext.napoleon",
     "numpydoc",
     "sphinx.ext.ifconfig",
     "sphinx.ext.githubpages",
