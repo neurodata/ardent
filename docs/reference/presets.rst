@@ -10,4 +10,3 @@ batch_preprocessing
 -------------------
 
 .. automodule:: ardent.presets.batch_preprocessing
-
