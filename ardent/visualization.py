@@ -193,6 +193,7 @@ def heatslices(data,
         ycuts (list, optional): A list of indices at which to display a view in the second row. Defaults to [n_cuts evenly spaced indices. Half the spacing between indices pads each end].
         zcuts (list, optional): A list of indices at which to display a view in the third row. Defaults to [n_cuts evenly spaced indices. Half the spacing between indices pads each end.].
         limit_mode (str, NoneType, optional): A string indicating what mode to use for clipping the extrema of data for determining the scaling to the interval [vmin, vmax]. 
+            
             Accepted values:
                 - None
                 - 'stdev'
