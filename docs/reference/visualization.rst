@@ -1,8 +1,4 @@
 visualization
 =============
 
-.. currentmodule:: ardent.visualization
-
-
-
-.. autofunction:: heatslices
+.. automodule:: ardent.visualization
