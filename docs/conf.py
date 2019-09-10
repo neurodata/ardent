@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.abspath(".."))
 # -- Project information -----------------------------------------------------
 
 project = "ARDENT"
-copyright = "2019, Devin Crowley"
+copyright = "2019"
 author = "Devin Crowley"
 
 # The full version, including alpha/beta/rc tags
