@@ -8,16 +8,16 @@ def _verify_data_is_ndarray(data):
 
 
 def cast_to_typed_array(data, dtype=float):
-        """
-        Returns a copy of data cast as a np.ndarray of type dtype.
-        
-        Args:
-            data (np.ndarray): The array to be cast.
-            dtype (type, optional): The dtype to cast data to. Defaults to float. Defaults to float.
-
-        Returns:
-            np.ndarray: A copy of data cast to type dtype.
-        """
+    """
+    Returns a copy of data cast as a np.ndarray of type dtype.
+    
+    Args:
+        data (np.ndarray): The array to be cast.
+        dtype (type, optional): The dtype to cast data to. Defaults to float. Defaults to float.
+    
+    Returns:
+        np.ndarray: A copy of data cast to type dtype.
+    """
 
     return _validate_ndarray(data, dtype=dtype)
 
