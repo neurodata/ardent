@@ -4,7 +4,7 @@ preprocessing
 preprocessing pipeline
 ----------------------
 
-.. currentmodule: ardent.preprocessing.__init__
+.. currentmodule:: ardent.preprocessing.__init__
 
 .. autofunction:: preprocess
 
