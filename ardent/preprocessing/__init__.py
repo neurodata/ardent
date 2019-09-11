@@ -31,9 +31,9 @@ def preprocess(data:(np.ndarray, list), processes:list):
     Perform each preprocessing function in processes, in the order listed, 
     on data if it is an array, or on each element in data if it is a list of arrays.
     
-    Arguments:
-        data {(np.ndarray, list)} -- The array or list of arrays to be preprocessed.
-        processes {list} -- The list of strings, each corresponding to the name of a preprocessing function.
+    Args:
+        data (np.ndarray, list): The array or list of arrays to be preprocessed.
+        processes (list): The list of strings, each corresponding to the name of a preprocessing function.
     
     Raises:
         TypeError: Raised if data is a list whose elements are not all of type np.ndarray.
@@ -42,7 +42,7 @@ def preprocess(data:(np.ndarray, list), processes:list):
         ValueError: Raised if any element of processes is not a recognized preprocessing function.
     
     Returns:
-        (np.ndarray, list) -- A copy of data after having each function in processes applied.
+        np.ndarray, list: A copy of data after having each function in processes applied.
     """
 
     # Verify data.

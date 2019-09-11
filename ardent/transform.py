@@ -13,14 +13,14 @@ from . import io
 from pathlib import Path
 import pickle
 
-class Transform():
-    """transform stores the deformation that is output by a registration 
+class Transform:
+    """Transform stores the deformation that is output by a registration 
     and provides methods for applying that transformation to various images."""
     
     def __init__(self):
-        """Initialize Transform object. If used without arguments, sets attributes 
-        to None. 
-        TODO: Add option to register on initialization?"""
+        """
+        Initialize Transform object. Sets attributes to None.
+        """
 
         # Create attributes.
         self.phis = None
@@ -61,35 +61,34 @@ class Transform():
         Perform a registration using transformer between template and target.
         Populates attributes for future calls to the apply_transform method.
         
-        Arguments:
-            template {np.ndarray} -- Image to target.
-            target {np.ndarray} -- Image to be registered to.
-        
-        Keyword Arguments:
-            template_resolution {scalar, list} -- Per-axis resolution of template. (default: {[1,1,1]})
-            target_resolution {scalar, list} -- Per-axis resolution of target. (default: {[1,1,1]})
-            preset {string, NoneType} -- Preset of registration parameters. 
+        Args:
+            template (np.ndarray): Image to target.
+            target (np.ndarray): Image to be registered to.
+            template_resolution (scalar, list, optional): Per-axis resolution of template. Defaults to: [1,1,1].
+            target_resolution (scalar, list, optional): Per-axis resolution of target. Defaults to: [1,1,1].
+            preset (string, NoneType, optional): Preset of registration parameters. 
                 If any of those values are provided anyway, the provided values supersede the corresponding preset values.
                 Supported options:
                     'identity'
                     'clarity, mouse'
                     'nissl, mouse'
                     'mri, human'
-                (default: {None})
-            sigmaR {float} -- Deformation allowance. (default: {None})
-            eV {float} -- Deformation step size. (default: {None})
-            eL {float} -- Linear transformation step size. (default: {None})
-            eT {float} -- Translation step size. (default: {None})
-            A {np.ndarray, NoneType} -- Initial affine transformation. (default: {None})
-            v {np.ndarray} -- Initial velocity field. (default: {None})
-            device {(NoneType, str)} -- The device to be used with pytorch. If None, will choose 'cuda:0' if cuda is available, else 'cpu'.
+                Defaults to: None.
+            sigmaR (float, optional): Deformation allowance. Defaults to: None.
+            eV (float, optional): Deformation step size. Defaults to: None.
+            eL (float, optional): Linear transformation step size. Defaults to: None.
+            eT (float, optional): Translation step size. Defaults to: None.
+            A (np.ndarray, NoneType, optional): Initial affine transformation. Defaults to: None.
+            v (np.ndarray, optional): Initial velocity field. Defaults to: None.
+            device (NoneType, str, optional): The device to be used with pytorch. If None, will choose 'cuda:0' if cuda is available, else 'cpu'.
                 Valid options:
                     None
                     'cuda:0'
                     'cpu'
+                Defaults to: None.
         
         Returns:
-            None -- Sets internal attributes and returns None.
+            None: Sets internal attributes and returns None.
         """
 
         # Collect registration parameters from chosen caller.
@@ -130,15 +129,13 @@ class Transform():
         Apply the transformation--computed by the last call to self.register--to subject, 
         deforming it into the space of <deform_to>.
         
-        Arguments:
-            subject {np.ndarray} -- The image to deform.
-        
-        Keyword Arguments:
-            deform_to {str} -- Either 'template' or 'target' indicating which to deform <subject> to match. (default: {"template"})
-            save_path {str, Path} -- The full path to save the output to. (default: {None})
+        Args:
+            subject (np.ndarray): The image to deform.
+            deform_to (str, optional): Either 'template' or 'target' indicating which to deform <subject> to match. Defaults to: "template".
+            save_path (str, Path, optional): The full path to save the output to. Defaults to: None.
         
         Returns:
-            np.ndarray -- The result of deforming <subject> to match <deform_to>.
+            np.ndarray: The result of deforming <subject> to match <deform_to>.
         """
 
         deformed_subject = torch_apply_transform(image=subject, deform_to=deform_to, transformer=self.transformer)
@@ -153,8 +150,8 @@ class Transform():
         """
         Save the entire instance of this Transform object (self) to file.
         
-        Arguments:
-            file_path {str, Path} -- The full path to save self to.
+        Args:
+            file_path (str, Path): The full path to save self to.
         """
 
         io.save_pickled(self, file_path)
@@ -165,8 +162,8 @@ class Transform():
         Load an entire instance of a Transform object from memory, as from a file created with the save method, 
         and transplants all of its writeable attributes into self.
         
-        Arguments:
-            file_path {str, Path} -- The full path that a Transform object was saved to.
+        Args:
+            file_path (str, Path): The full path that a Transform object was saved to.
         """
 
         transform = io.load_pickled(file_path)
