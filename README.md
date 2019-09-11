@@ -1,6 +1,12 @@
 # ARDENT
 **A**ffine and **R**egularized **DE**formative **N**umeric **T**ransform (ARDENT) is a Python package for performing image registration using LDDMM.
 
+- [Overview](#overview)
+- [Documentation](#documentation)
+- [System Requirements](#system-requirements)
+- [Installation Guide](#installation-guide)
+- [License](#license)
+
 # Overview
 Experimental neuroscience produces a stunning amount of imaging data from light or electron microscopy, MRI, and other 3D modalities. To be of real use these datasets must be interpreted with respect to each other and to refined standards: well-characterized image datasets called atlases. To build these interpretations, dense spatial alignments must be computed. This process is known as image registration, in which one image is optimally deformed, or flowed, until it aligns with another. Accurate registration is challenged by the large scale of imaging data and the heterogeneity across species scales and modalities. The viability of current tools is limited to images acquired in the most standard settings, restricting our ability to analyze data from novel experiments performed in a majority of labs.
 
@@ -22,14 +28,14 @@ This package is written for Python3. Currently, it is supported for Python 3.6.
 ### Python Dependencies
 `ARDENT` mainly depends on the Python scientific stack with the notable addition of PyTorch. However, this is pending deprecation.
 ```
-    numpy
-    matplotlib
-    scipy
-    scikit-learn
-    simpleitk
-    nibabel
-    nilearn
-    pytorch
+numpy
+matplotlib
+scipy
+scikit-learn
+simpleitk
+nibabel
+nilearn
+pytorch
 ```
 
 # Installation Guide
@@ -44,3 +50,6 @@ git clone https://github.com/neurodata/ardent
 cd ardent
 python3 setup.py install
 ```
+
+# License
+This project is covered under the [Apache 2.0 License](https://github.com/neurodata/ardent/blob/master/LICENSE).
