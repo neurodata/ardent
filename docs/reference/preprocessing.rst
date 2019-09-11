@@ -1,10 +1,12 @@
 preprocessing
 =============
 
-batch preprocessing
--------------------
+preprocessing pipeline
+----------------------
 
-.. automodule:: ardent.preprocessing.__init__
+.. currentmodule: ardent.preprocessing.__init__
+
+.. autofunction:: preprocess
 
 resampling
 ----------
