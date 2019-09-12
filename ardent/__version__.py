@@ -21,7 +21,7 @@ __license__ = "Apache License 2.0"
 __min_python_version__ = (3, 6)
 __python_requires__ = ">={}.{}".format(*__min_python_version__)
 __classifiers__ = [
-    "Development Status :: 1 - Alpha",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering :: Mathematics",
     "License :: OSI Approved :: Apache Software License",
