@@ -1,5 +1,9 @@
 # ARDENT
-**A**ffine and **R**egularized **DE**formative **N**umeric **T**ransform (ARDENT) is a Python package for performing image registration using LDDMM.
+**A**ffine and **R**egularized **DE**formative **N**umeric **T**ransform (ARDENT) is a Python package for performing automated image registration using LDDMM.
+
+ARDENT stands out for its ability to predict and correct for artifacts and image nonuniformity, perform registrations across image modalities, and other features in development.
+[//]: # (Pending feature: space-varying contrast transform.)
+[//]: # Testing comment
 
 - [Overview](#overview)
 - [Documentation](#documentation)
@@ -9,6 +13,12 @@
 
 # Overview
 Experimental neuroscience produces a stunning amount of imaging data from light or electron microscopy, MRI, and other 3D modalities. To be of real use these datasets must be interpreted with respect to each other and to refined standards: well-characterized image datasets called atlases. To build these interpretations, dense spatial alignments must be computed. This process is known as image registration, in which one image is optimally deformed, or flowed, until it aligns with another. Accurate registration is challenged by the large scale of imaging data and the heterogeneity across species scales and modalities. The viability of current tools is limited to images acquired in the most standard settings, restricting our ability to analyze data from novel experiments performed in a majority of labs.
+
+Current tools can perform well on very standard images but perform poorly on data with various imperfections. This restricts our ability to analyze data from novel ezperiments performed in a majority of labs.
+
+Current tools perform well on images acquired in a standardized environment.
+automated registration tools perform well when the images are 
+ardent is an automated registration package with sweet features like cross-modal, artifact correction, spa and bar,
 
 ARDENT is an accessible pure-python image registration package in development with these neuroimaging challenges in mind.
 
