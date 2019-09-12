@@ -40,7 +40,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
-    "numpydoc",
+    # "numpydoc",
     "sphinx.ext.ifconfig",
     "sphinx.ext.githubpages",
     "sphinxcontrib.rawfiles",
@@ -65,7 +65,7 @@ autodoc_default_options = ["members", "inherited-members"]
 autodoc_member_order = "bysource"  # default is alphabetical
 
 # -- sphinx.ext.numpydoc
-numpydoc_show_class_members=False
+# numpydoc_show_class_members=False
 
 # -- sphinx.ext.intersphinx
 intersphinx_mapping = {
