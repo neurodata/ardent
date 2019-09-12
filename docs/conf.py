@@ -40,7 +40,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
-    # "numpydoc",
+    "numpydoc",
     "sphinx.ext.ifconfig",
     "sphinx.ext.githubpages",
     "sphinxcontrib.rawfiles",
@@ -63,6 +63,9 @@ autosummary_generate = True
 autoclass_content = "both"
 autodoc_default_options = ["members", "inherited-members"]
 autodoc_member_order = "bysource"  # default is alphabetical
+
+# -- sphinx.ext.napoleon
+napoleon_numpy_docstring = True
 
 # -- sphinx.ext.numpydoc
 # numpydoc_show_class_members=False
@@ -88,7 +91,7 @@ source_encoding = "utf-8"
 # so a file named "default.css" will overwrite the builtin "default.css".
 # html_static_path = ["_static"]
 
-pygments_style = "sphinx"
+pygments_style = None # Previously "sphinx"
 smartquotes = False
 
 # Use RTD Theme
