@@ -17,11 +17,13 @@ Experimental neuroscience produces a stunning amount of imaging data from light 
 To be of real use these datasets must be interpreted with respect to each other and to refined standards: well-characterized image datasets called atlases. 
 To build these interpretations, dense spatial alignments must be computed. This process is known as image registration, 
 in which one image is optimally deformed, or flowed, until it aligns with another. 
-Accurate registration is challenged by the large scale of imaging data and the heterogeneity across species scales and modalities.  
-The viability of current tools is limited to images acquired in the most standard settings, 
-restricting our ability to analyze data from novel experiments performed in a majority of labs.
+Accurate registration is challenged by the large scale of imaging data and the heterogeneity across species scales and modalities. 
+Current tools can perform well on very standard images but perform poorly on data with various imperfections. 
+This restricts our ability to analyze data from novel experiments performed in a majority of labs.
 
-ARDENT, or Affine and Regularized DEformative Numeric Transform, is an accessible pure-python image registration package in development with these neuroimaging challenges in mind.
+ARDENT is an accessible pure-python image registration package in development with these neuroimaging challenges in mind. 
+It stands out for its ability to predict and correct for artifacts and image nonuniformity, perform registrations across image modalities, 
+ease of use, and other features in development.
 
 Python
 ------

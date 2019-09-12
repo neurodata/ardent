@@ -8,12 +8,9 @@ In the meantime, please visit the Jupyter Notebooks available on GitHub in the `
 for some explanation and example usage.
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
 
-    ..demo.demo
+    Demo
+    ----
 
-    ..demo
-
-    .. demo.demo
-
-    .. demo
+    demo/demo
