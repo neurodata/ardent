@@ -3,8 +3,6 @@ Tutorial
 
 .. toctree::
     :maxdepth: 1
-
-    Demo
-    ----
+    :caption: Demo
 
     demo/demo

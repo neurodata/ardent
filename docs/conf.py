@@ -65,7 +65,7 @@ autodoc_default_options = ["members", "inherited-members"]
 autodoc_member_order = "bysource"  # default is alphabetical
 
 # -- sphinx.ext.napoleon
-napoleon_numpy_docstring = True
+# napoleon_numpy_docstring = True
 
 # -- sphinx.ext.numpydoc
 # numpydoc_show_class_members=False
