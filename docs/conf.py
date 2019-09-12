@@ -59,9 +59,11 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "**.ipynb_checkpoints"]
 autosummary_generate = True
 
 # -- sphinx.ext.autodoc
-autoclass_content = "both"
-autodoc_default_flags = ["members", "inherited-members"]
+autoclass_content = "class"
+# autodoc_default_options = ["members"]
 autodoc_member_order = "bysource"  # default is alphabetical
+
+# numpydoc_show_class_members=False
 
 # -- sphinx.ext.intersphinx
 intersphinx_mapping = {
@@ -84,7 +86,9 @@ source_encoding = "utf-8"
 # so a file named "default.css" will overwrite the builtin "default.css".
 # html_static_path = ["_static"]
 
-pygments_style = "sphinx"
+# napoleon_numpy_docstring = True
+
+pygments_style = None
 smartquotes = False
 
 # Use RTD Theme
