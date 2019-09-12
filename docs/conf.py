@@ -40,6 +40,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
+    "numpydoc",
     "sphinx.ext.ifconfig",
     "sphinx.ext.githubpages",
     "sphinxcontrib.rawfiles",
@@ -55,12 +56,16 @@ templates_path = ["_templates"]
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "**.ipynb_checkpoints"]
 
+
 autosummary_generate = True
 
 # -- sphinx.ext.autodoc
 autoclass_content = "both"
-autodoc_default_flags = ["members", "inherited-members"]
+autodoc_default_options = ["members", "inherited-members"]
 autodoc_member_order = "bysource"  # default is alphabetical
+
+# -- sphinx.ext.numpydoc
+numpydoc_show_class_members=False
 
 # -- sphinx.ext.intersphinx
 intersphinx_mapping = {
