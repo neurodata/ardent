@@ -10,4 +10,8 @@ for some explanation and example usage.
 .. toctree::
     :maxdepth: 2
 
-    demo/demo
+    demo/demo.ipynb
+
+    demo
+
+    demo.ipynb
