@@ -54,7 +54,12 @@ Documentation
    reference/index
    license
 
+.. toctree::
+   :maxdepth: 1
+   :caption: Useful Links
 
+   ARDENT @ GitHub <http://www.github.com/neurodata/ardent/>
+   ARDENT @ PyPI <https://pypi.org/project/ardent/>
 
 Indices and tables
 ==================
