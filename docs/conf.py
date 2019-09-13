@@ -63,6 +63,12 @@ autoclass_content = "both"
 autodoc_default_flags = ["members", "inherited-members"]
 autodoc_member_order = "bysource"  # default is alphabetical
 
+# -- sphinx.ext.napoleon
+# napoleon_numpy_docstring = True
+
+# -- sphinx.ext.numpydoc
+numpydoc_show_class_members=False
+
 # -- sphinx.ext.intersphinx
 intersphinx_mapping = {
     "numpy": ("https://docs.scipy.org/doc/numpy", None),
