@@ -84,7 +84,7 @@ source_encoding = "utf-8"
 # so a file named "default.css" will overwrite the builtin "default.css".
 # html_static_path = ["_static"]
 
-pygments_style = "sphinx"
+pygments_style = None # previosly: "sphinx"
 smartquotes = False
 
 # Use RTD Theme
