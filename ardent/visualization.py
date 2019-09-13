@@ -174,38 +174,41 @@ def _get_cuts(data, xcuts, ycuts, zcuts, n_cuts=5, interesting_cuts=False):
 # TODO: verify plotting works with xyzcuts provided with inconsistent lengths.
 # TODO: allow n_cuts to be a triple.
 def heatslices(data, 
-    title=None, figsize=(10, 5), cmap='gray', # Figure-tuning arguments.
-    n_cuts=5, xcuts=[], ycuts=[], zcuts=[], # What will be displayed.
-    limit_mode=None, stdevs=4, quantile=0.01, limits=None, vmin=0, vmax=1): # data-scaling arguments.
+    title=None, figsize=(10, 5), cmap='gray',
+    n_cuts=5, xcuts=[], ycuts=[], zcuts=[],
+    limit_mode=None, stdevs=4, quantile=0.01, limits=None, vmin=0, vmax=1):
     """
     Produce a figure with 3 rows of images, each corresponding to a different orthogonal view of data.
     Each row can have arbitrarily many parallel views.
     The data is scaled such that its bulk lies on the interval [0, 1], with the extrema optionally left unaccounted for in determining the scaling.
     Those values outside the limits saturate at 0 or 1 in the figure.
     
-    Arguments:
-        data {np.ndarray} -- A 3 or 4 dimensional array containing volumetric intensity data (if 3D) or RGB data (if 4D) to be viewed.
-    
-    Keyword Arguments:
-        title {str} -- The figure title. (default: {None})
-        figsize {tuple} -- The width and height of the figure in inches. (default: {(10, 5)})
-        cmap {str} -- The name of the chosen color map. (default: {'gray'})
-        n_cuts {int} -- The number of parallel views to show on each row without a specified list of cuts. (default: {5})
-        xcuts {list} -- A list of indices at which to display a view in the first row. (default: {<n_cuts evenly spaced indices. Half the spacing between indices pads each end.>})
-        ycuts {list} -- A list of indices at which to display a view in the second row. (default: {<n_cuts evenly spaced indices. Half the spacing between indices pads each end.>})
-        zcuts {list} -- A list of indices at which to display a view in the third row. (default: {<n_cuts evenly spaced indices. Half the spacing between indices pads each end.>})
-        limit_mode {(NoneType, str)} -- A string indicating what mode to use for clipping the extrema of data for determining the scaling to the interval [vmin, vmax]. 
+    Args:
+        data (np.ndarray): A 3 or 4 dimensional array containing volumetric intensity data (if 3D) or RGB data (if 4D) to be viewed.
+        title (str, optional): The figure title. Defaults to None.
+        figsize (tuple, optional): The width and height of the figure in inches. Defaults to (10, 5).
+        cmap (str, optional): The name of the chosen color map. Defaults to 'gray'.
+        n_cuts (int, optional): The number of parallel views to show on each row without a specified list of cuts. Defaults to 5.
+        xcuts (list, optional): A list of indices at which to display a view in the first row. Defaults to [n_cuts evenly spaced indices. Half the spacing between indices pads each end].
+        ycuts (list, optional): A list of indices at which to display a view in the second row. Defaults to [n_cuts evenly spaced indices. Half the spacing between indices pads each end].
+        zcuts (list, optional): A list of indices at which to display a view in the third row. Defaults to [n_cuts evenly spaced indices. Half the spacing between indices pads each end.].
+        limit_mode (str, NoneType, optional): A string indicating what mode to use for clipping the extrema of data for determining the scaling to the interval [vmin, vmax]. 
+            
             Accepted values:
-                None
-                'stdev'
-                'quantile'
-            (default: {None})
-        stdevs {float} -- Used if limit_mode == 'stdev': The number of standard deviations from the mean that will be scaled to the interval [vmin, vmax]. (default: {4})
-        quantile {float} -- Used if limit_mode == 'quantile': The proportion of data that will not be considered for scaling to the interval [vmin, vmax]. (default: {0.01})
-        limits {(tuple, list, np.ndarray)} -- The lower and upper limits bookmarking which values in data will be considered when scaling to the interval [vmin, vmax]. Overrides limit_mode. (default: {None})
-        vmin {float} -- The smallest value displayed in the figure. Smaller values will saturate to vmin. (default: {0})
-        vmax {float} -- The largest value displayed in the figure. Larger values will saturate to vmax. (default: {1})
+                - None
+                - 'stdev'
+                - 'quantile'
+            Defaults to None.
+        stdevs (float, optional): Used if limit_mode == 'stdev': The number of standard deviations from the mean that will be scaled to the interval [vmin, vmax]. Defaults to 4.
+        quantile (float, optional): Used if limit_mode == 'quantile': The proportion of data that will not be considered for scaling to the interval [vmin, vmax]. Defaults to 0.01.
+        limits (sequence, optional): The lower and upper limits bookmarking which values in data will be considered when scaling to the interval [vmin, vmax]. Overrides limit_mode. Defaults to None.
+        vmin (float, optional): The smallest value displayed in the figure. Smaller values will saturate to vmin. Defaults to 0.
+        vmax (float, optional): The largest value displayed in the figure. Larger values will saturate to vmax. Defaults to 1.
     """
+     # Figure-tuning arguments.
+     # What will be displayed.
+     # data-scaling arguments.
+    
     
     # TODO: validate all inputs.
     # Validate inputs

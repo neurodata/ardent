@@ -19,13 +19,14 @@ sys.path.insert(0, os.path.abspath(".."))
 # -- Project information -----------------------------------------------------
 
 project = "ARDENT"
-copyright = "2019, Devin Crowley"
+copyright = "2019"
 author = "Devin Crowley"
 
 # The full version, including alpha/beta/rc tags
 
-release = "0.0.1"
-version = "0.0.1"
+from ardent import __version__
+version = __version__.__version__
+release = version
 
 # -- General configuration ---------------------------------------------------
 
@@ -38,6 +39,7 @@ extensions = [
     "sphinx.ext.todo",
     "sphinx.ext.viewcode",
     "sphinx.ext.mathjax",
+    "sphinx.ext.napoleon",
     "numpydoc",
     "sphinx.ext.ifconfig",
     "sphinx.ext.githubpages",
@@ -52,7 +54,7 @@ templates_path = ["_templates"]
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = []
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "**.ipynb_checkpoints"]
 
 autosummary_generate = True
 
@@ -61,10 +63,22 @@ autoclass_content = "both"
 autodoc_default_flags = ["members", "inherited-members"]
 autodoc_member_order = "bysource"  # default is alphabetical
 
+# -- sphinx.ext.napoleon
+# napoleon_numpy_docstring = True
+
+# -- sphinx.ext.numpydoc
+numpydoc_show_class_members=False
+
+# -- sphinx.ext.intersphinx
+intersphinx_mapping = {
+    "numpy": ("https://docs.scipy.org/doc/numpy", None),
+    "python": ("https://docs.python.org/3", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy/reference", None),
+    "skimage": ("https://scikit-image.org/", None),
+}
 
 # -- sphinx options ----------------------------------------------------------
 source_suffix = ".rst"
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "**.ipynb_checkpoints"]
 master_doc = "index"
 source_encoding = "utf-8"
 
@@ -76,7 +90,7 @@ source_encoding = "utf-8"
 # so a file named "default.css" will overwrite the builtin "default.css".
 # html_static_path = ["_static"]
 
-pygments_style = "sphinx"
+pygments_style = None # previosly: "sphinx"
 smartquotes = False
 
 # Use RTD Theme

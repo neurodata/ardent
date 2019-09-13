@@ -160,18 +160,16 @@ def downsample_image(image, scale_factors, truncate=False):
     """
     Downsample an image by averaging.
     
-    Arguments:
-        image {np.ndarray} -- The image to be downsampled.
-        scale_factors {int, sequence} -- The per-axis factor by which to reduce the image size.
-    
-    Keyword Arguments:
-        truncate {bool} -- If True, evenly truncates the image down to the nearest multiple of the scale_factor for each axis. (default: {False})
+    Args:
+        image (np.ndarray): The image to be downsampled.
+        scale_factors (int, sequence): The per-axis factor by which to reduce the image size.
+        truncate (bool, optional): If True, evenly truncates the image down to the nearest multiple of the scale_factor for each axis. Defaults to False.
     
     Raises:
         ValueError: Raised if any of scale_factors is less than 1.
     
     Returns:
-        np.ndarray -- A downsampled copy of <image>.
+        np.ndarray: A downsampled copy of image.
     """
     
     # Validate arguments.
@@ -197,40 +195,25 @@ def downsample_image(image, scale_factors, truncate=False):
     return scaled_image
 
 
-    """
-    Resamples image as close as possible to the desired_xyz_resolution. 
-    If return_true_resolution, returns (resampled_image, true_resolution).
-
-    If pad_to_match_res, pads image to guarantee that true_resolution == desired_xyz_resolution.
-    Else, err_to_higher_res indicates whether the new_shape is rounded up or down to guarantee 
-    the true shape of image is maintained (shape * resolution).
-
-    If average_on_downsample, perform averaging before resampling 
-    when downsampling by at least a factor of 2.
-
-    truncate is used in downsample_image.
-    """
 def change_resolution_to(image, xyz_resolution, desired_xyz_resolution, 
 pad_to_match_res=True, err_to_higher_res=True, average_on_downsample=True, 
 truncate=False, return_true_resolution=False, **resample_kwargs):
     """
     Resamples <image> to get its resolution as close as possible to <desired_xyz_resolution>.
     
-    Arguments:
-        image {np.ndarray} -- The image to be resampled, allowing arbitrary dimensions.
-        xyz_resolution {float, sequence} -- The per-axis resolution of <image>.
-        desired_xyz_resolution {float, list} -- The desired per-axis resolution of <image> after resampling.
-    
-    Keyword Arguments:
-        pad_to_match_res {bool} -- If True, pads a copy of <image> to guarantee that <desired_xyz_resolution> is achieved. (default: {True})
-        err_to_higher_res {bool} -- If True and <pad_to_match_res> is False, rounds the shape of the new image up rather than down. (default: {True})
-        average_on_downsample {bool} -- If True, performs downsample_image on a copy of <image> before resampling to prevent aliasing. 
-            It scales the image by the largest integer possible along each axis without reducing the resolution past the final resolution. (default: {True})
-        truncate {bool} -- A kwarg passed to downsample_image. If true, evenly truncates the image down to the nearest multiple of the scale_factor for each axis. (default: {False})
-        return_true_resolution {bool} -- If True, rather than just returning the resampled image, returns a tuple containing the resampled image and its actual resolution. (default: {False})
+    Args:
+        image (np.ndarray): The image to be resampled, allowing arbitrary dimensions.
+        xyz_resolution (float, sequence): The per-axis resolution of <image>.
+        desired_xyz_resolution (float, sequence): The desired per-axis resolution of <image> after resampling.
+        pad_to_match_res (bool, optional): If True, pads a copy of <image> to guarantee that <desired_xyz_resolution> is achieved. Defaults to True.
+        err_to_higher_res (bool, optional): If True and <pad_to_match_res> is False, rounds the shape of the new image up rather than down. Defaults to True.
+        average_on_downsample (bool, optional): If True, performs downsample_image on a copy of <image> before resampling to prevent aliasing. 
+            It scales the image by the largest integer possible along each axis without reducing the resolution past the final resolution. Defaults to True.
+        truncate (bool, optional): A kwarg passed to downsample_image. If true, evenly truncates the image down to the nearest multiple of the scale_factor for each axis. Defaults to False.
+        return_true_resolution (bool, optional): If True, rather than just returning the resampled image, returns a tuple containing the resampled image and its actual resolution. Defaults to False.
     
     Returns:
-        np.ndarray, tuple -- A resampled copy of <image>. 
+        np.ndarray, tuple: A resampled copy of <image>. 
             If <return_true_resolution> was provided as True, then the return value is a tuple containing the resampled copy of <image> and its actual resolution.
     """
 
@@ -319,9 +302,10 @@ truncate=False, return_true_resolution=False, **resample_kwargs):
     Resample image such that its resolution is scaled by 1 / <xyz_scales>[dim] or abs(xyz_scales[dim]) if xyz_scales[dim] is negative, in each dimension dim.
 
     
-    Arguments:
-        image {np.ndarray} -- The image to be resampled, allowing arbitrary dimensions.
-        xyz_scales {float, sequence} -- The per-axis factors by which to adjust the resolution of <image>. Negative values are treated as the reciprocal of their positive counterparts.
+    Args:
+        image (np.ndarray): The image to be resampled, allowing arbitrary dimensions.
+        xyz_scales (float, sequence): The per-axis factors by which to adjust the resolution of <image>. Negative values are treated as the reciprocal of their positive counterparts.
+            
             xyz_scales[dim] > 1 implies upsampling - increasing resolution and image size.
             xyz_scales[dim] = 1 implies unity - no change in resolution for this dimension.
             xyz_scales[dim] < 1 implies downsampling - decreasing resolution and image size.
@@ -333,18 +317,16 @@ truncate=False, return_true_resolution=False, **resample_kwargs):
             xyz_scales[dim] = 1/2 --> downsample by 2
             xyz_scales[dim] = -3 --> downsample by 3
             xyz_scales[dim] = -1/5 --> upsample by 5
-    
-    Keyword Arguments:
-        xyz_resolution {float, sequence} -- The per-axis resolution of <image>. (default: {1})
-        pad_to_match_res {bool} -- If True, pads a copy of <image> to guarantee that <desired_xyz_resolution> is achieved. (default: {True})
-        err_to_higher_res {bool} -- If True and <pad_to_match_res> is False, rounds the shape of the new image up rather than down. (default: {True})
-        average_on_downsample {bool} -- If True, performs downsample_image on a copy of <image> before resampling to prevent aliasing. 
-            It scales the image by the largest integer possible along each axis without reducing the resolution past the final resolution. (default: {True})
-        truncate {bool} -- A kwarg passed to downsample_image. If true, evenly truncates the image down to the nearest multiple of the scale_factor for each axis. (default: {False})
-        return_true_resolution {bool} -- If True, rather than just returning the resampled image, returns a tuple containing the resampled image and its actual resolution. (default: {False})
+        xyz_resolution (float, sequence): The per-axis resolution of <image>. Defaults to 1.
+        pad_to_match_res (bool): If True, pads a copy of <image> to guarantee that <desired_xyz_resolution> is achieved. Defaults to True.
+        err_to_higher_res (bool): If True and <pad_to_match_res> is False, rounds the shape of the new image up rather than down. Defaults to True.
+        average_on_downsample (bool): If True, performs downsample_image on a copy of <image> before resampling to prevent aliasing. 
+            It scales the image by the largest integer possible along each axis without reducing the resolution past the final resolution. Defaults to True.
+        truncate (bool): A kwarg passed to downsample_image. If true, evenly truncates the image down to the nearest multiple of the scale_factor for each axis. Defaults to False.
+        return_true_resolution (bool): If True, rather than just returning the resampled image, returns a tuple containing the resampled image and its actual resolution. Defaults to False.
     
     Returns:
-        np.ndarray, tuple -- A resampled copy of <image>. 
+        np.ndarray, tuple: A resampled copy of <image>. 
             If <return_true_resolution> was provided as True, then the return value is a tuple containing the resampled copy of <image> and its actual resolution.
     """
 

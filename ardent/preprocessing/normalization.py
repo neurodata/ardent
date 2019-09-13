@@ -8,13 +8,30 @@ def _verify_data_is_ndarray(data):
 
 
 def cast_to_typed_array(data, dtype=float):
-    """Returns a copy of data cast as a np.ndarray of type dtype."""
+    """
+    Returns a copy of data cast as a np.ndarray of type dtype.
+    
+    Args:
+        data (np.ndarray): The array to be cast.
+        dtype (type, optional): The dtype to cast data to. Defaults to float. Defaults to float.
+    
+    Returns:
+        np.ndarray: A copy of data cast to type dtype.
+    """
 
     return _validate_ndarray(data, dtype=dtype)
 
 
 def normalize_by_MAD(data):
-    """Returns a copy of <data> divided by its mean absolute deviation."""
+    """
+    Returns a copy of data divided by its mean absolute deviation.
+    
+    Args:
+        data (np.ndarray): The array to be normalized.
+    
+    Returns:
+        np.ndarray: A copy of data divided by its mean absolute deviation.
+    """
     
     _verify_data_is_ndarray(data)
 
@@ -26,7 +43,14 @@ def normalize_by_MAD(data):
 
 
 def center_to_mean(data):
-    """Returns a copy of <data> subtracted by its mean."""
+    """
+    Returns a copy of data subtracted by its mean.
+
+    Args:
+        data (np.ndarray): The array to be subtracted from.
+    Returns:
+        np.ndarray: A copy of data subtracted by its mean.
+    """
 
     _verify_data_is_ndarray(data)
 
@@ -36,7 +60,18 @@ def center_to_mean(data):
 
 
 def pad(data, pad_width=5, mode='constant', constant_values=0):
-    """Returns a padded copy of <data>."""
+    """
+    Returns a padded copy of data.
+    
+    Args:
+        data (np.ndarray): The array to be padded.
+        pad_width (int, optional): The amount by which to pad. Defaults to 5.
+        mode (str, optional): The padding mode used in np.pad. Defaults to 'constant'.
+        constant_values (float, optional): The values to use in padding if mode='constant'. Defaults to 0.
+    
+    Returns:
+        np.ndarray: The padded copy of data.
+    """
 
     _verify_data_is_ndarray(data)
 
