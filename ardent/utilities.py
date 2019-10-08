@@ -7,6 +7,7 @@ Defines:
         _validate_xyz_resolution(ndim, xyz_resolution)
         _compute_axes(shape, xyz_resolution=1, origin='center')
         _compute_coords(shape, xyz_resolution=1, origin='center')
+        _multiply_by_affine(array, affine)
 """
 
 import numpy as np
@@ -45,17 +46,17 @@ def _validate_scalar_to_multi(value, size=3, dtype=float):
             value = np.full(size, value, dtype=dtype)
         elif len(value) != size:
             # value's length is incompatible with size.
-            raise ValueError(f"The length of value must either be 1 or it must match size."
-                f"len(value): {len(value)}.")    
+            raise ValueError(f"The length of value must either be 1 or it must match size.\n"
+                f"len(value): {len(value)}, size: {size}.")
     else:
         # value.ndim > 1.
-        raise ValueError(f"value must not have more than 1 dimension."
+        raise ValueError(f"value must not have more than 1 dimension.\n"
             f"value.ndim: {value.ndim}.")
     
     # TODO: verify that this is necessary and rewrite/remove accordingly.
     # Check for np.nan values.
     if np.any(np.isnan(value)):
-        raise NotImplementedError("np.nan values encountered. What input led to this result?"
+        raise NotImplementedError("np.nan values encountered. What input led to this result?\n"
             "Write in an exception as appropriate.")
         raise ValueError(f"value contains inappropriate values for the chosen dtype "
             f"and thus contains np.nan values.")
@@ -85,25 +86,25 @@ forbid_object_dtype=True, broadcast_to_shape=None):
 
     # Verify minimum_ndim.
     if not isinstance(minimum_ndim, int):
-        raise TypeError(f"minimum_ndim must be of type int."
+        raise TypeError(f"minimum_ndim must be of type int.\n"
             f"type(minimum_ndim): {type(minimum_ndim)}.")
     if minimum_ndim < 0:
-        raise ValueError(f"minimum_ndim must be non-negative."
+        raise ValueError(f"minimum_ndim must be non-negative.\n"
             f"minimum_ndim: {minimum_ndim}.")
 
     # Verify required_ndim.
     if required_ndim is not None:
         if not isinstance(required_ndim, int):
-            raise TypeError(f"required_ndim must be either None or of type int."
+            raise TypeError(f"required_ndim must be either None or of type int.\n"
                 f"type(required_ndim): {type(required_ndim)}.")
         if required_ndim < 0:
-            raise ValueError(f"required_ndim must be non-negative."
+            raise ValueError(f"required_ndim must be non-negative.\n"
                 f"required_ndim: {required_ndim}.")
 
     # Verify dtype.
     if dtype is not None:
         if not isinstance(dtype, type):
-            raise TypeError(f"dtype must be either None or a valid type."
+            raise TypeError(f"dtype must be either None or a valid type.\n"
                 f"type(dtype): {type(dtype)}.")
 
     # Validate array.
@@ -122,7 +123,8 @@ forbid_object_dtype=True, broadcast_to_shape=None):
     # Verify compliance with forbid_object_dtype.
     if forbid_object_dtype:
         if array.dtype == object and dtype != object:
-            raise TypeError(f"Casting array to a np.ndarray produces an array of dtype object while forbid_object_dtype == True and dtype != object.")
+            raise TypeError(f"Casting array to a np.ndarray produces an array of dtype object \n"
+                f"while forbid_object_dtype == True and dtype != object.")
 
     # Validate compliance with required_ndim.
     if required_ndim is not None and array.ndim != required_ndim:
@@ -135,7 +137,7 @@ forbid_object_dtype=True, broadcast_to_shape=None):
 
     # Verify compliance with minimum_ndim.
     if array.ndim < minimum_ndim:
-        raise ValueError(f"array.ndim must be at least equal to minimum_ndim."
+        raise ValueError(f"array.ndim must be at least equal to minimum_ndim.\n"
             f"array.ndim: {array.ndim}, minimum_ndim: {minimum_ndim}.")
     
     # Broadcast array if appropriate.
@@ -144,6 +146,7 @@ forbid_object_dtype=True, broadcast_to_shape=None):
 
     return array
 
+# TODO: reverse order of arguments and propagate change throughout ardent.
 def _validate_xyz_resolution(ndim, xyz_resolution):
     """Validate xyz_resolution to assure its length matches the dimensionality of image."""
 
@@ -198,3 +201,14 @@ def _compute_coords(shape, xyz_resolution=1, origin='center'):
     meshes = np.meshgrid(*axes, indexing='ij')
 
     return np.stack(meshes, axis=-1)
+
+
+def _multiply_by_affine(array, affine):
+    return np.stack(
+        arrays=[
+            np.sum(affine[0, :3] * array + affine[0, 3], axis=-1), 
+            np.sum(affine[1, :3] * array + affine[1, 3], axis=-1), 
+            np.sum(affine[2, :3] * array + affine[2, 3], axis=-1), 
+        ],
+        axis=-1,
+    )
