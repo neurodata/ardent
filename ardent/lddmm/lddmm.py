@@ -1,31 +1,15 @@
-#%% Definition cell
 import numpy as np
 from scipy.interpolate import interpn
 from scipy.linalg import inv, solve
 from skimage.transform import resize
 
-# from ardent.utilities import _validate_ndarray
-# from ardent.utilities import _validate_scalar_to_multi
-# from ardent.utilities import _validate_xyz_resolution
-# from ardent.utilities import _compute_axes
-# from ardent.utilities import _compute_coords
-# from ardent.utilities import _multiply_by_affine
-# from ardent.preprocessing.resampling import change_resolution_to
-
-from matplotlib import pyplot as plt
-%matplotlib inline
-from pathlib import Path
-import sys
-utilities_path = Path('~/Documents/jhu/ardent/ardent/utilities.py').expanduser()
-with open(utilities_path, 'r') as utilities_file:
-    exec(utilities_file.read())
-resampling_path = Path('~/Documents/jhu/ardent/ardent/preprocessing/resampling.py').expanduser()
-with open(resampling_path, 'r') as resampling_file:
-    exec(resampling_file.read())
-
-# from utilities import _validate_scalar_to_multi
-# from utilities import _compute_axes
-# from utilities import _compute_coords
+from ardent.utilities import _validate_ndarray
+from ardent.utilities import _validate_scalar_to_multi
+from ardent.utilities import _validate_xyz_resolution
+from ardent.utilities import _compute_axes
+from ardent.utilities import _compute_coords
+from ardent.utilities import _multiply_by_affine
+from ardent.preprocessing.resampling import change_resolution_to
 
 '''
   _            _       _                         
@@ -37,7 +21,7 @@ with open(resampling_path, 'r') as resampling_file:
                                                  
 '''
 
-class Lddmm:
+class _Lddmm:
     """Class for storing shared values and objects used in registration and performing the registration via methods. Not intended for direct user interaction."""
 
     def __init__(self, template, target, template_resolution=1, target_resolution=1, num_iterations=200, 
@@ -63,9 +47,10 @@ class Lddmm:
         self.B = np.empty((self.target.size, self.contrast_order + 1))
         self.matching_weights = np.ones_like(self.target)
         self.deformed_template_to_t = []
+        self.deformed_template = None
+        self.contrast_deformed_template = None
 
         # Final outputs.
-        if self.contrast_order < 1: raise ValueError(f"contrast_order must be at least 1.\ncontrast_order: {self.contrast_order}")
         self.contrast_coefficients = np.zeros(contrast_order + 1)
         self.contrast_coefficients[0] = np.mean(self.target) - np.mean(self.template) * np.std(self.target) / np.std(self.template)
         self.contrast_coefficients[1] = np.std(self.target) / np.std(self.template)
@@ -74,10 +59,12 @@ class Lddmm:
         self.velocity_fields = np.zeros((*self.template.shape, self.num_timesteps, self.template.ndim))
         self.phi = _compute_coords(self.template.shape, self.template_resolution)
         self.phi_inv = _compute_coords(self.template.shape, self.template_resolution)
-        self.deformed_template = None
-        self.contrast_deformed_template = None
+        self.phi_inv_affine_inv = np.copy(self.target_coords)
+        self.affine_phi = np.copy(self.template_coords)
 
         # Internals.
+        self.contrast_order = int(contrast_order)
+        if self.contrast_order < 1: raise ValueError(f"contrast_order must be at least 1.\ncontrast_order: {self.contrast_order}")
         self.sigmaM = sigmaM or np.std(self.target)
         self.sigmaR = sigmaR or 10 * np.max(self.template_resolution)
         self.smooth_length = smooth_length or 2 * np.max(self.template_resolution)
@@ -89,7 +76,7 @@ class Lddmm:
             1 - self.smooth_length**2 
             * np.sum((-2  + 2 * np.cos(2 * np.pi * fourier_velocity_fields_coords * self.template_resolution)) / self.template_resolution**2, axis=-1)
         )**self.fourier_high_pass_filter_power
-        self.phi_inv_affine_inv_target_coords = _compute_coords(self.target.shape, self.target_resolution)
+        self.phi_inv_affine_inv = _compute_coords(self.target.shape, self.target_resolution)
 
         # Accumulators.
         self.matching_energies = []
@@ -123,18 +110,22 @@ class Lddmm:
             # Do other things.
             pass
 
-            affine_phi, phi_inv_affine_inv, template_resolution, target_resolution
             return dict(
-                affine_phi=,
-                phi_inv_affine_inv=,
-                template_resolution=,
-                target_resolution=,
-                affine=,
-                # Accumulators.
-                matching_energies=,
-                regularization_energies=,
-                total_energies=,
+                affine=affine,
+                phi=phi,
+                phi_inv=phi_inv,
+                affine_phi=affine_phi,
+                phi_inv_affine_inv=phi_inv_affine_inv,
+                contrast_coefficients=contrast_coefficients,
 
+                # Helpers.
+                template_resolution=template_resolution,
+                target_resolution=target_resolution,
+
+                # Accumulators.
+                matching_energies=matching_energies,
+                regularization_energies=matching_energies,
+                total_energies=total_energies,
             )
 
 
@@ -179,7 +170,7 @@ class Lddmm:
         set in holder:
             phi_inv
             affine_inv
-            phi_inv_affine_inv_target_coords
+            phi_inv_affine_inv
             deformed_template
 
 
@@ -219,7 +210,7 @@ class Lddmm:
         affine_inv_target_coords = _multiply_by_affine(self.target_coords, self.affine_inv)
 
         # Apply phi_inv to affine_inv_target_coords.
-        self.phi_inv_affine_inv_target_coords = interpn(
+        self.phi_inv_affine_inv = interpn(
             points=self.template_axes, 
             values=self.phi_inv - self.template_coords, 
             xi=affine_inv_target_coords, 
@@ -227,19 +218,19 @@ class Lddmm:
             fill_value=None, 
         ) + affine_inv_target_coords
 
-        # Apply phi_inv_affine_inv_target_coords to template.
+        # Apply phi_inv_affine_inv to template.
         # deformed_template is sampled at the coordinates of the target.
         self.deformed_template = interpn(
             points=self.template_axes, 
             values=self.template, 
-            xi=self.phi_inv_affine_inv_target_coords, 
+            xi=self.phi_inv_affine_inv, 
             bounds_error=False, 
             fill_value=None, 
         )
 
             # DEBUG future tests pytest
             # print('max of phi_inv - template_coords:',np.max(self.phi_inv - self.template_coords))
-            # print('max dif of phi_inv_affine_inv_target_coords:',np.max(self.phi_inv_affine_inv_target_coords - self.target_coords))
+            # print('max dif of phi_inv_affine_inv:',np.max(self.phi_inv_affine_inv - self.target_coords))
 
 
     def _compute_contrast_map(self):
@@ -387,7 +378,7 @@ class Lddmm:
 
             # Compute the determinant of the gradient of phi.
 
-    # End Lddmm.
+    # End _Lddmm.
 '''
   _    _                          __                          _     _                       
  | |  | |                        / _|                        | |   (_)                      
@@ -398,7 +389,7 @@ class Lddmm:
                                                                                             
 '''
 
-def _register(template, target, template_resolution=1, target_resolution=1, 
+def register(template, target, template_resolution=1, target_resolution=1, 
     translation_stepsize=0, 
     linear_stepsize=0, 
     deformative_stepsize=0, 
@@ -409,7 +400,7 @@ def _register(template, target, template_resolution=1, target_resolution=1,
     num_timesteps=5, contrast_order=1, sigmaM=None, smooth_length=None):
 
     # Set up Lddmm instance.
-    lddmm = Lddmm(
+    lddmm = _Lddmm(
         template=template,
         target=target,
         template_resolution=template_resolution,
@@ -562,71 +553,10 @@ template_resolution, target_resolution, output_resolution=None, deform_to="templ
         position_field_resolution = np.copy(template_resolution)
     elif deform_to == "target":
         position_field = phi_inv_affine_inv
-        position_field_resolution = np.cpy(target_resolution)
+        position_field_resolution = np.copy(target_resolution)
 
     # Call _apply_position_field.
 
     deformed_subject = _apply_position_field(subject, subject_resolution, output_resolution, position_field, position_field_resolution)
 
     return deformed_subject
-
-#%% Test cell
-
-template = np.zeros([12]*3, dtype=float)
-r = 5
-for i in range(template.shape[0]):
-    for j in range(template.shape[1]):
-        for k in range(template.shape[2]):
-            if np.sqrt((i-6)**2 + (j-6)**2 + (k-6)**2) <= r:
-                template[i,j,k] = 1
-
-target = np.zeros([18, 18, 12], dtype=float)
-a, b, c = 8, 8, 5
-for i in range(target.shape[0]):
-    for j in range(target.shape[1]):
-        for k in range(target.shape[2]):
-            if (i-9)**2 / a**2 + (j-9)**2 / b**2 + (k-6)**2 / c**2 <= 1:
-                target[i,j,k] = 1
-
-template = (template - np.mean(template)) / np.mean(template)
-target = (target - np.mean(target)) / np.mean(target)
-
-# holder = register(
-#     template, target, 
-#     num_iterations=2,
-# )
-
-holder = _Holder(template, target)#, affine=[[0,1,0,0],[-1,0,0,0],[0,0,1,0],[0,0,0,1]])
-
-deformed_subject = _apply_transform(subject=template, subject_resolution=1, output_resolution=None, deform_to="target", holder=holder)
-
-
-
-
-
-
-
-'''
-def register(template, target, template_resolution=1, target_resolution=1, 
-    translation_stepsize=0, 
-    linear_stepsize=0, 
-    deformative_stepsize=0, 
-    sigmaR=0, 
-    num_iterations=200, 
-    num_affine_only_iterations=50, 
-    initial_affine=None, initial_v=None, 
-    num_timesteps=5, contrast_order=1, sigmaM=None, smooth_length=None):
-'''
-#%%
-for i in range(0, len(template), len(template)//5):
-    plt.imshow(template[i])
-    plt.show()
-
-#%%
-ds = deformed_subject
-
-for i in range(0, len(ds), len(ds)//5):
-    plt.imshow(ds[i])
-    plt.show()
-
-#%%

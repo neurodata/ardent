@@ -1,13 +1,12 @@
 import numpy as np
 from skimage.transform import resize
+from scipy.interpolate import interpn
 
 from ardent.utilities import _validate_scalar_to_multi
 from ardent.utilities import _validate_ndarray
 from ardent.utilities import _validate_xyz_resolution
 from ardent.utilities import _compute_axes
 from ardent.utilities import _compute_coords
-
-from scipy.interpolate import interpn
 
 def _resample(image, resolution, final_resolution, **interpn_kwargs):
     # interpn wrapper, not to be used without achievable final_resolution.
@@ -81,6 +80,7 @@ pad_to_match_res=True, err_to_higher_res=True, return_final_resolution=False, **
     # Perform resampling.
 
     resampled_image = resize(image, final_shape, **resize_kwargs)
+    return resampled_image
 
 
 def change_resolution_by(image, scales, resolution=1, 
