@@ -47,7 +47,7 @@ def preprocess(data:(np.ndarray, list), processes:list):
 
     # Verify data.
     if isinstance(data, list):
-        if not all(isinstance(datam, np.ndarray) for datum in data):
+        if not all(isinstance(datum, np.ndarray) for datum in data):
             raise TypeError(f"If data is a list, all elements must be np.ndarrays.\n"
                 f"type(data[0]): {type(data[0])}.")
     elif isinstance(data, np.ndarray):

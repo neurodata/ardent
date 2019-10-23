@@ -24,14 +24,15 @@ class Transformer:
         If transformer is not None (assumed to be a Transformer instance), 
         its A and v attributes are used, unless they are provided as arguments.
         '''
-
-        if 'cuda' in device or device == 'cpu':
-            self.device = device
-        else:
+        if device is None:
             if torch.cuda.is_available():
                 self.device = 'cuda:0'
             else:
                 self.device = 'cpu'
+        elif 'cuda' in device or device == 'cpu':
+            self.device = device
+        else:
+            raise ValueError(f"inappropriate value for device. device: {device}.")
         self.dtype = torch.float64
         
         self.I = torch.tensor(I, dtype=self.dtype, device=self.device)
