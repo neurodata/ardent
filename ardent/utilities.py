@@ -65,7 +65,7 @@ def _validate_scalar_to_multi(value, size=3, dtype=float):
 
 
 def _validate_ndarray(array, minimum_ndim=0, required_ndim=None, dtype=None, 
-forbid_object_dtype=True, broadcast_to_shape=None):
+forbid_object_dtype=True, broadcast_to_shape=None, reshape_to_shape=None):
     """Cast (a copy of) array to a np.ndarray if possible and return it 
     unless it is noncompliant with minimum_ndim, required_ndim, and dtype.
     
@@ -80,7 +80,9 @@ forbid_object_dtype=True, broadcast_to_shape=None):
     unless object is the dtype.
     
     If a shape is provided to broadcast_to_shape, unless noncompliance is found with 
-    required_ndim, array is broadcasted to that shape."""
+    required_ndim, array is broadcasted to that shape.
+    
+    if a shape is provided to reshape_to_shape, array is reshaped to that shape."""
 
     # Verify arguments.
 
@@ -144,6 +146,10 @@ forbid_object_dtype=True, broadcast_to_shape=None):
     if broadcast_to_shape is not None:
         array = np.copy(np.broadcast_to(array=array, shape=broadcast_to_shape))
 
+    # Reshape array if appropriate.
+    if reshape_to_shape is not None:
+        array = np.copy(array.reshape(reshape_to_shape))
+
     return array
 
 # TODO: reverse order of arguments and propagate change throughout ardent.
@@ -203,12 +209,20 @@ def _compute_coords(shape, xyz_resolution=1, origin='center'):
     return np.stack(meshes, axis=-1)
 
 
-def _multiply_by_affine(array, affine):
-    return np.stack(
-        arrays=[
-            np.sum(affine[0, :3] * array + affine[0, 3], axis=-1), 
-            np.sum(affine[1, :3] * array + affine[1, 3], axis=-1), 
-            np.sum(affine[2, :3] * array + affine[2, 3], axis=-1), 
-        ],
-        axis=-1,
-    )
+def _multiply_by_affine(array, affine, spatial_dimensions=3):
+
+    arrays = []
+    for dim in range(spatial_dimensions):
+        arrays.append(np.sum(affine[dim, :-1] * array + affine[dim, -1], axis=-1))
+
+    return np.stack(arrays=arrays, axis=-1)
+
+    # Expanded for 3D:
+    # return np.stack(
+    #     arrays=[
+    #         np.sum(affine[0, :3] * array + affine[0, -1], axis=-1), 
+    #         np.sum(affine[1, :3] * array + affine[1, -1], axis=-1), 
+    #         np.sum(affine[2, :3] * array + affine[2, -1], axis=-1), 
+    #     ],
+    #     axis=-1,
+    # )

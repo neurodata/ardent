@@ -221,7 +221,7 @@ class Transformer:
         # get error
         err = (self.fAphiI - self.J)*self.WM
         # energy gradient with respect to affine transform
-        DfAphiI = self.gradient(self.AphiI,dx=self.dxJ)
+        DfAphiI = self.gradient(self.fAphiI,dx=self.dxJ)
         DfAphiI0 = torch.cat((DfAphiI,torch.zeros(self.nxJ,dtype=self.dtype,device=self.device)[None]))
         # gradient should go down a row, X across a column
         AiXo = torch.cat((self.AiX,torch.ones(self.nxJ,dtype=self.dtype,device=self.device)[None]))
