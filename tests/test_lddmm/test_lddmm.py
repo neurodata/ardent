@@ -328,20 +328,20 @@ def test_it_runs(): # TODO: delete test
 
     # Test identity quasi-two-dimensional sphere to sphere registration.
 
-    template = np.array([[[(col-6)**2 + (row-6)**2 <= 4**2 for col in range(13)] for row in range(13)]]*3, int)
+    template = np.array([[[(col-6)**2 + (row-6)**2 <= 4**2 for col in range(13)] for row in range(13)]]*5, float)
     template_resolution = 1
-    target = np.array([[[(col-6)**2 + (row-6)**2 <= 4**2 for col in range(13)] for row in range(13)]]*3, int)
+    target = np.array([[[(col-6)**2 + (row-6)**2 <= 4**2 for col in range(13)] for row in range(13)]]*5, float)
     target_resolution = 1
-    translational_stepsize = 0.5
-    linear_stepsize = 0.5
-    deformative_stepsize = 0.5
+    translational_stepsize = 0.01
+    linear_stepsize = 0.01
+    deformative_stepsize = 0.01
     sigmaR = 2
     num_iterations = 200
     num_affine_only_iterations = 50
     initial_affine = np.eye(4)
     initial_velocity_fields = None
     num_timesteps = 5
-    contrast_order = 3
+    contrast_order = 1
     sigmaM=None
     smooth_length = None
 

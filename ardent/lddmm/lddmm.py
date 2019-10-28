@@ -352,12 +352,12 @@ class _Lddmm:
 
         # Set basis array B and create composites.
         for power in range(self.contrast_order + 1):
-            self.B[:, power] = deformed_template_ravel**2
+            self.B[:, power] = deformed_template_ravel**power
         B_transpose_B = np.matmul(self.B.T * matching_weights_ravel, self.B)
         B_transpose_target = np.matmul(self.B.T * matching_weights_ravel, target_ravel)
 
         # Solve for contrast_coefficients.
-        optimal_contrast_coefficients = solve(B_transpose_B, self.B.T * target_ravel, assume_a='pos')
+        optimal_contrast_coefficients = solve(B_transpose_B, B_transpose_target, assume_a='pos')
 
         # We do this so we can use the optimal gradient descent.
         # The format is used so that we could substitute a different approaach to computing the gradient.
@@ -376,7 +376,7 @@ class _Lddmm:
         # matching_error_prime = (self.deformed_template - self.target) * self.matching_weights
 
         # # Energy gradient with respect to affine transform.
-        # deformed_template_affine_gradient = np.gradient(self.deformed_template, self.target_resolution)
+        # deformed_template_affine_gradient = np.gradient(self.deformed_template, *self.target_resolution, axis=[0,1,2])
 
         # # TODO: wat?
         # deformed_template_affine_gradient_? = np.concatenate(deformed_template_affine_gradient, np.zeros_like(self.template))
@@ -419,7 +419,7 @@ class _Lddmm:
             affine_phi = _multiply_by_affine(phi, self.affine)
 
             # Compute the determinant of the gradient of phi.
-            grad_phi = np.gradient(phi, self.template_resolution)
+            grad_phi = np.stack(np.gradient(phi, *self.template_resolution, axis=[0,1,2]), -1)
             det_grad_phi = (
                 grad_phi[0,0]*(grad_phi[1,1]*grad_phi[2,2] - grad_phi[1,2]*grad_phi[2,1]) -
                 grad_phi[0,1]*(grad_phi[1,0]*grad_phi[2,2] - grad_phi[1,2]*grad_phi[2,0]) +
@@ -432,24 +432,25 @@ class _Lddmm:
                 values=d_matching_d_deformed_template,
                 xi=affine_phi,
                 bounds_error=False,
-                fill_vallue=None,
+                fill_value=None,
             )
 
             # The gradient of the template image deformed to time t.
-            deformed_template_to_t_gradient = np.gradient(self.deformed_template_to_t[timestep], np.template_resolution)
+            deformed_template_to_t_gradient = np.stack(np.gradient(self.deformed_template_to_t[timestep], *self.template_resolution, axis=[0,1,2]), -1)
 
             # The derivative of the matching cost with respect to the velocity at time t
             # is the product of 
             # (the error deformed to time t), 
             # (the template gradient deformed to time t), 
             # & (the determinant of the jacobian of the transformation).
+            print('error_at_t', error_at_t.shape, '\ngrad_phi', grad_phi.shape, '\ndet_grad_phi', det_grad_phi.shape, '\ndeformed_template_to_t_gradient', deformed_template_to_t_gradient.shape)
             d_matching_d_velocity_at_t = (error_at_t * det_grad_phi) * deformed_template_to_t_gradient * (-1.0/self.sigmaM**2) * det(self.affine)
+            assert False
             # To convert from derivative to gradient we smooth by applying a low-pass filter in the frequency domain.
             matching_cost_at_t_gradient = np.fft.fftn(d_matching_d_velocity_at_t, (0,1,2)) * self.low_pass_filter # TODO: define
             # Add the gradient of the regularization term.
             # TODO: grab from compute_cost.
             matching_cost_at_t_gradient += np.fft.fftn(self.velocity_fields[...,timestep,:], (0,1,2)) / self.sigmaR**2
-            # TODO: save at each timestep.
             # Invert fourier transform back to the spatial domain.
             d_matching_d_velocity_at_t = np.fft.ifftn(matching_cost_at_t_gradient, (0,1,2)).real
 
