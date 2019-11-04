@@ -12,8 +12,8 @@ with open(version_file) as VersionFile:
     exec(VersionFile.read(), version_info)
 
 # Descriptive text contained in README.md.
-with open('README.md', 'r') as readmeFile:
-    README = readmeFile.read()
+with open('README.md', 'r') as ReadmeFile:
+    README = ReadmeFile.read()
 
 # Requirements defined in requirements.txt.
 requirements_file = parent_ / 'requirements.txt'
