@@ -24,10 +24,12 @@ from ardent.preprocessing.resampling import change_resolution_to
 class _Lddmm:
     """Class for storing shared values and objects used in registration and performing the registration via methods. Not intended for direct user interaction."""
 
-    def __init__(self, template, target, template_resolution=1, target_resolution=1, check_artifacts=False, num_iterations=200, 
+    def __init__(self, template, target, template_resolution=1, target_resolution=1, check_artifacts=False, num_iterations=200, num_affine_only_iterations=50, 
     num_timesteps=5, initial_affine=np.eye(4), initial_velocity_fields = None, contrast_order=1, sigmaM=None, sigmaA=None, smooth_length=None, sigmaR=None, 
     translational_stepsize=None, linear_stepsize=None, deformative_stepsize=None, contrast_stepsize=1):
     
+        # Inputs.
+
         # Images.
         self.template = template
         self.target = target
@@ -40,52 +42,67 @@ class _Lddmm:
         self.target_axes = _compute_axes(self.target.shape, self.target_resolution)
         self.target_coords = _compute_coords(self.target.shape, self.target_resolution)
 
-        # Intermediates.
-        self.num_iterations = num_iterations
-        self.num_timesteps = num_timesteps
-        self.delta_t = 1 / self.num_timesteps
-        self.contrast_order = contrast_order
-        self.B = np.empty((self.target.size, self.contrast_order + 1))
-        self.matching_weights = np.ones_like(self.target)
-        self.deformed_template_to_t = []
-        self.deformed_template = None
-        self.contrast_deformed_template = None
-
-        # Final outputs.
-        self.contrast_coefficients = np.zeros(contrast_order + 1)
-        self.contrast_coefficients[0] = np.mean(self.target) - np.mean(self.template) * np.std(self.target) / np.std(self.template)
-        self.contrast_coefficients[1] = np.std(self.target) / np.std(self.template)
-        self.affine = _validate_ndarray(initial_affine, required_ndim=2, reshape_to_shape=(4, 4))
-        self.affine_inv = inv(self.affine)
-        self.velocity_fields = initial_velocity_fields or np.zeros((*self.template.shape, self.num_timesteps, self.template.ndim))
-        self.phi = _compute_coords(self.template.shape, self.template_resolution)
-        self.phi_inv = _compute_coords(self.template.shape, self.template_resolution)
-        self.phi_inv_affine_inv = np.copy(self.target_coords)
-        self.affine_phi = np.copy(self.template_coords)
-
-        # Internals.
-        self.check_artifacts = check_artifacts
-        self.artifact_mean_value = None
+        # Constants.
         self.translational_stepsize = float(translational_stepsize)
         self.linear_stepsize = float(linear_stepsize)
         self.deformative_stepsize = float(deformative_stepsize)
         self.contrast_stepsize = contrast_stepsize
         self.contrast_order = int(contrast_order)
         if self.contrast_order < 1: raise ValueError(f"contrast_order must be at least 1.\ncontrast_order: {self.contrast_order}")
+        self.sigmaR = sigmaR or 10 * np.max(self.template_resolution)
         self.sigmaM = sigmaM or np.std(self.target)
         self.sigmaA = sigmaA or 5 * self.sigmaM
-        self.artifact_mean_value = np.max(self.target) if self.sigmaA is not None else 0 # TODO: verify this is right.
-        self.sigmaR = sigmaR or 10 * np.max(self.template_resolution)
         self.smooth_length = smooth_length or 2 * np.max(self.template_resolution)
-        self.fourier_velocity_fields = np.zeros_like(self.velocity_fields, np.complex128)
 
+        # Flags.
+        self.check_artifacts = check_artifacts
+
+        # Constructions.
+
+        # Constants.
+        self.artifact_mean_value = np.max(self.target) if self.sigmaA is not None else 0 # TODO: verify this is right.
         self.fourier_high_pass_filter_power = 2
         fourier_velocity_fields_coords = _compute_coords(self.template.shape, 1 / (self.template_resolution * self.template.shape), origin='zero')
         self.fourier_high_pass_filter = (
             1 - self.smooth_length**2 
             * np.sum((-2  + 2 * np.cos(2 * np.pi * fourier_velocity_fields_coords * self.template_resolution)) / self.template_resolution**2, axis=-1)
         )**self.fourier_high_pass_filter_power
-        self.phi_inv_affine_inv = _compute_coords(self.target.shape, self.target_resolution)
+        self.num_iterations = num_iterations
+        self.num_affine_only_iterations = num_affine_only_iterations
+        self.num_timesteps = num_timesteps
+        self.delta_t = 1 / self.num_timesteps
+
+        # Dynamics.
+        self.affine = _validate_ndarray(initial_affine, required_ndim=2, reshape_to_shape=(4, 4))
+        self.velocity_fields = initial_velocity_fields or np.zeros((*self.template.shape, self.num_timesteps, self.template.ndim))
+        self.phi = np.copy(self.template_coords)
+        self.affine_phi = np.copy(self.template_coords)
+        self.phi_inv = np.copy(self.template_coords)
+        self.phi_inv_affine_inv = np.copy(self.target_coords)
+        self.fourier_velocity_fields = np.zeros_like(self.velocity_fields, np.complex128)
+        self.matching_weights = np.ones_like(self.target)
+        self.deformed_template_to_t = []
+        self.deformed_template = interpn(
+            points=self.template_axes, 
+            values=self.template, 
+            xi=self.phi_inv_affine_inv, 
+            bounds_error=False, 
+            fill_value=None, 
+        )
+        self.contrast_coefficients = np.zeros(self.contrast_order + 1)
+        self.contrast_coefficients[0] = np.mean(self.target) - np.mean(self.template) * np.std(self.target) / np.std(self.template)
+        self.contrast_coefficients[1] = np.std(self.target) / np.std(self.template)
+        self.B = np.empty((self.target.size, self.contrast_order + 1))
+        for power in range(self.contrast_order + 1):
+            self.B[:, power] = self.deformed_template.ravel()**power
+        self.contrast_deformed_template = None
+        fourier_template_coords = _compute_coords(self.template.shape, 1 / (self.template_resolution * self.template.shape), origin='zero')
+        self.low_pass_filter = 1 / (
+            (1 - self.smooth_length**2 * (
+                np.sum(-2 + 2 * np.cos(2 * np.pi * self.template_resolution * fourier_template_coords) / self.template_resolution**2, -1)
+                )
+            )**self.fourier_high_pass_filter_power
+        )**2
 
         # Accumulators.
         self.matching_energies = []
@@ -116,36 +133,36 @@ class _Lddmm:
             # Let the contrast map gradient be the optimal minus the current.
             contrast_map_gradient = self._compute_contrast_map_gradient()
             # Compute affine gradient.
-            affine_gradient = self._compute_affine_gradient()
+            affine_inv_gradient = self._compute_affine_inv_gradient()
             # Compute velocity_fields gradient.
-            velocity_fields_gradients = self._compute_velocity_fields_gradient()
+            if iteration >= self.num_affine_only_iterations: velocity_fields_gradients = self._compute_velocity_fields_gradients()
             # Update contrast map.
             self._update_contrast_map(contrast_map_gradient)
             # Update affine.
-            self._update_affine(affine_gradient)
+            self._update_affine(affine_inv_gradient)
             # Update velocity_fields.
-            self._update_velocity_fields(velocity_fields_gradients)
+            if iteration >= self.num_affine_only_iterations: self._update_velocity_fields(velocity_fields_gradients)
             # Do other things.
             pass
 
-            # TODO: save all below as attributes.
-            return dict(
-                affine=affine,
-                phi=phi,
-                phi_inv=phi_inv,
-                affine_phi=affine_phi,
-                phi_inv_affine_inv=phi_inv_affine_inv,
-                contrast_coefficients=contrast_coefficients,
+        return dict(
+            # Core.
+            affine=self.affine,
+            phi=self.phi,
+            phi_inv=self.phi_inv,
+            affine_phi=self.affine_phi,
+            phi_inv_affine_inv=self.phi_inv_affine_inv,
+            contrast_coefficients=self.contrast_coefficients,
 
-                # Helpers.
-                template_resolution=template_resolution,
-                target_resolution=target_resolution,
+            # Helpers.
+            template_resolution=self.template_resolution,
+            target_resolution=self.target_resolution,
 
-                # Accumulators.
-                matching_energies=matching_energies,
-                regularization_energies=matching_energies,
-                total_energies=total_energies,
-            )
+            # Accumulators.
+            matching_energies=self.matching_energies,
+            regularization_energies=self.matching_energies,
+            total_energies=self.total_energies,
+        )
 
 
     def _update_and_apply_position_field(self):
@@ -221,12 +238,9 @@ class _Lddmm:
             )
             
             # End time loop.
-        
-        # Compute affine_inv.
-        self.affine_inv = inv(self.affine)
 
         # Apply affine_inv to target_coords by multiplication.
-        affine_inv_target_coords = _multiply_by_affine(self.target_coords, self.affine_inv)
+        affine_inv_target_coords = _multiply_by_affine(self.target_coords, inv(self.affine))
 
         # Apply phi_inv to affine_inv_target_coords.
         self.phi_inv_affine_inv = interpn(
@@ -269,7 +283,7 @@ class _Lddmm:
 
     def _compute_weights(self):
         """
-        Compute the  matching_weights between the contrast_deformed_template and the target.
+        Compute the matching_weights between the contrast_deformed_template and the target.
 
         used in holder:
             contrast_deformed_template
@@ -360,45 +374,92 @@ class _Lddmm:
         optimal_contrast_coefficients = solve(B_transpose_B, B_transpose_target, assume_a='pos')
 
         # We do this so we can use the optimal gradient descent.
-        # The format is used so that we could substitute a different approaach to computing the gradient.
+        # The format is used so that we could substitute a different approach to computing the gradient.
         contrast_coefficients_gradient = optimal_contrast_coefficients - self.contrast_coefficients
 
         return contrast_coefficients_gradient
 
 
-    def _update_contrast_map(contrast_map_gradient):
+    def _update_contrast_map(self, contrast_map_gradient):
 
         self.contrast_coefficients += contrast_map_gradient * self.contrast_stepsize
 
 
-    def _compute_affine_gradient(self):
+    def _compute_affine_inv_gradient(self):
+
+        # Generate the template image deformed by phi_inv but not affected by the affine.
+        non_affine_deformed_template = interpn(
+            points=self.template_axes, 
+            values=self.template, 
+            xi=self.phi_inv, 
+            bounds_error=False, 
+            fill_value=None, 
+        )
+
+        # Compute the gradient of non_affine_deformed_template.
+        non_affine_deformed_template_gradient = np.stack(np.gradient(non_affine_deformed_template, *self.template_resolution), -1)
+
+        # Apply the affine to each component of non_affine_deformed_template_gradient.
+        sample_coords = _multiply_by_affine(self.target_coords, inv(self.affine))
+        deformed_template_gradient = interpn(
+            points=self.template_axes,
+            values=non_affine_deformed_template_gradient,
+            xi=sample_coords,
+            bounds_error=False,
+            fill_value=None,
+        )
+
+        # Reshape and broadcast deformed_template_gradient from shape (x,y,z,3) to (x,y,z,3,1) to (x,y,z,3,4).
+        deformed_template_gradient_broadcast = np.repeat(np.expand_dims(deformed_template_gradient, -1), repeats=4, axis=-1)
+
+        # Concatenate a 4th row of 0's to the 2nd-last dimension of deformed_template_gradient_broadcast.
+        zeros = np.zeros((*deformed_template_gradient_broadcast.shape[:-2], 1, 4))
+        deformed_template_gradient_broadcast = np.concatenate((deformed_template_gradient_broadcast, zeros), -2)
+
+        # Construct homogenous_target_coords by appending 1's at the end of the last dimension throughout self.target_coords.
+        ones = np.ones((*self.target_coords.shape[:-1], 1))
+        homogenous_target_coords = np.concatenate((self.target_coords, ones), -1)
         
-        # matching_error_prime = (self.deformed_template - self.target) * self.matching_weights
+        # deformed_template_gradient_broadcast  has shape (x,y,z,4,4).
+        # homogenous_target_coords              has shape (x,y,z,4).
 
-        # # Energy gradient with respect to affine transform.
-        # deformed_template_affine_gradient = np.gradient(self.deformed_template, *self.target_resolution, axis=[0,1,2])
+        # To repeat homogenous_target_coords along the 2nd-last dimension of deformed_template_gradient_broadcast, 
+        # we reshape homogenous_target_coords from shape (x,y,z,4) to shape (x,y,z,1,4) and let that broadcast to shape (x,y,z,4,4).
 
-        # # TODO: wat?
-        # deformed_template_affine_gradient_? = np.concatenate(deformed_template_affine_gradient, np.zeros_like(self.template))
-        pass
-        
+        matching_affine_inv_gradient = deformed_template_gradient_broadcast * np.expand_dims(homogenous_target_coords, -2)
 
-
-    def _update_affine(affine_gradient):
-        pass
-
-
-    def _compute_velocity_fields_gradient(self):
-        # TODO: verify contrast_deformed_template = fAphiI
+        # Get error term.
         matching_error_prime = (self.contrast_deformed_template - self.target) * self.matching_weights
-        contrast_map_prime = np.zeros_like(self.target)
+        contrast_map_prime = np.zeros_like(self.target, float)
         for power in range(1, self.contrast_order + 1):
             contrast_map_prime += power * self.deformed_template**(power - 1) * self.contrast_coefficients[power]
         d_matching_d_deformed_template = matching_error_prime * contrast_map_prime
 
-        # Set phi to identity. phi is secretly phi_1t_inv but at the end of the loop 
+        affine_inv_gradient = matching_affine_inv_gradient * d_matching_d_deformed_template[...,None,None]
+
+        return np.sum(affine_inv_gradient, (0,1,2))
+
+
+    def _update_affine(self, affine_inv_gradient):
+        
+        affine_inv = inv(self.affine)
+
+        affine_inv += affine_inv_gradient * self.linear_stepsize
+
+        self.affine = inv(affine_inv)
+
+
+    def _compute_velocity_fields_gradients(self):
+
+        matching_error_prime = (self.contrast_deformed_template - self.target) * self.matching_weights
+        contrast_map_prime = np.zeros_like(self.target, float)
+        for power in range(1, self.contrast_order + 1):
+            contrast_map_prime += power * self.deformed_template**(power - 1) * self.contrast_coefficients[power]
+        d_matching_d_deformed_template = matching_error_prime * contrast_map_prime
+
+        # Set self.phi to identity. self.phi is secretly phi_1t_inv but at the end of the loop 
         # it will be phi_10_inv = phi_01 = phi.
-        phi = np.copy(self.template_coords)
+        self.phi = np.copy(self.template_coords)
 
         # Loop backwards across time.
         d_matching_d_velocities = []
@@ -406,9 +467,9 @@ class _Lddmm:
 
             # Update phi.
             sample_coords = self.template_coords + self.velocity_fields[..., timestep, :] * self.delta_t
-            phi = interpn(
+            self.phi = interpn(
                 points=self.template_axes, 
-                values=phi - self.template_coords, 
+                values=self.phi - self.template_coords, 
                 xi=sample_coords, 
                 bounds_error=False, 
                 fill_value=None, 
@@ -416,21 +477,21 @@ class _Lddmm:
 
             # Apply affine by multiplication.
             # This transforms error in the target space back to time t.
-            affine_phi = _multiply_by_affine(phi, self.affine)
+            self.affine_phi = _multiply_by_affine(self.phi, self.affine)
 
-            # Compute the determinant of the gradient of phi.
-            grad_phi = np.stack(np.gradient(phi, *self.template_resolution, axis=[0,1,2]), -1)
+            # Compute the determinant of the gradient of self.phi.
+            grad_phi = np.stack(np.gradient(self.phi, *self.template_resolution, axis=[0,1,2]), -1)
             det_grad_phi = (
-                grad_phi[0,0]*(grad_phi[1,1]*grad_phi[2,2] - grad_phi[1,2]*grad_phi[2,1]) -
-                grad_phi[0,1]*(grad_phi[1,0]*grad_phi[2,2] - grad_phi[1,2]*grad_phi[2,0]) +
-                grad_phi[0,2]*(grad_phi[1,0]*grad_phi[2,1] - grad_phi[1,1]*grad_phi[2,0])
+                grad_phi[...,0,0]*(grad_phi[...,1,1]*grad_phi[...,2,2] - grad_phi[...,1,2]*grad_phi[...,2,1]) -
+                grad_phi[...,0,1]*(grad_phi[...,1,0]*grad_phi[...,2,2] - grad_phi[...,1,2]*grad_phi[...,2,0]) +
+                grad_phi[...,0,2]*(grad_phi[...,1,0]*grad_phi[...,2,1] - grad_phi[...,1,1]*grad_phi[...,2,0])
             )
 
             # Transform error in target space back to time t.
             error_at_t = interpn(
                 points=self.target_axes,
                 values=d_matching_d_deformed_template,
-                xi=affine_phi,
+                xi=self.affine_phi,
                 bounds_error=False,
                 fill_value=None,
             )
@@ -443,23 +504,22 @@ class _Lddmm:
             # (the error deformed to time t), 
             # (the template gradient deformed to time t), 
             # & (the determinant of the jacobian of the transformation).
-            print('error_at_t', error_at_t.shape, '\ngrad_phi', grad_phi.shape, '\ndet_grad_phi', det_grad_phi.shape, '\ndeformed_template_to_t_gradient', deformed_template_to_t_gradient.shape)
-            d_matching_d_velocity_at_t = (error_at_t * det_grad_phi) * deformed_template_to_t_gradient * (-1.0/self.sigmaM**2) * det(self.affine)
-            assert False
+            d_matching_d_velocity_at_t = np.expand_dims(error_at_t * det_grad_phi, -1) * deformed_template_to_t_gradient * (-1.0/self.sigmaM**2) * det(self.affine)
+
             # To convert from derivative to gradient we smooth by applying a low-pass filter in the frequency domain.
-            matching_cost_at_t_gradient = np.fft.fftn(d_matching_d_velocity_at_t, (0,1,2)) * self.low_pass_filter # TODO: define
+            matching_cost_at_t_gradient = np.fft.fftn(d_matching_d_velocity_at_t, axes=(0,1,2)) * np.expand_dims(self.low_pass_filter, -1)
             # Add the gradient of the regularization term.
             # TODO: grab from compute_cost.
-            matching_cost_at_t_gradient += np.fft.fftn(self.velocity_fields[...,timestep,:], (0,1,2)) / self.sigmaR**2
+            matching_cost_at_t_gradient += np.fft.fftn(self.velocity_fields[...,timestep,:], axes=(0,1,2)) / self.sigmaR**2
             # Invert fourier transform back to the spatial domain.
-            d_matching_d_velocity_at_t = np.fft.ifftn(matching_cost_at_t_gradient, (0,1,2)).real
+            d_matching_d_velocity_at_t = np.fft.ifftn(matching_cost_at_t_gradient, axes=(0,1,2)).real
 
             d_matching_d_velocities.insert(0, d_matching_d_velocity_at_t)
 
         return d_matching_d_velocities
 
     
-    def _update_velocity_fields(velocity_fields_gradients):
+    def _update_velocity_fields(self, velocity_fields_gradients):
 
             for timestep in range(self.num_timesteps):
                 self.velocity_fields[...,timestep,:] -= velocity_fields_gradients[timestep] * self.deformative_stepsize
@@ -517,6 +577,7 @@ def register(template, target, template_resolution=1, target_resolution=1,
         template_resolution=template_resolution,
         target_resolution=target_resolution,
         num_timesteps=num_timesteps,
+        num_affine_only_iterations=num_affine_only_iterations,
         initial_affine=initial_affine,
         initial_velocity_fields=initial_velocity_fields,
         contrast_order=contrast_order,
@@ -557,7 +618,6 @@ template_shape, template_resolution, target_shape, target_resolution, deform_to=
         raise ValueError(f"deform_to must be either 'template' or 'target'.")
 
     # Compute intermediates.
-    affine_inv = inv(affine)
     num_timesteps = velocity_fields.shape[-2]
     delta_t = 1 / num_timesteps
     template_axes = _compute_axes(template_shape, template_resolution)
@@ -600,7 +660,7 @@ template_shape, template_resolution, target_shape, target_resolution, deform_to=
         # affine_phi has the resolution of the template.
     elif deform_to == "target":
         # Apply the affine by interpolation.
-        sample_coords = _multiply_by_affine(target_coords, affine_inv)
+        sample_coords = _multiply_by_affine(target_coords, inv(affine))
         phi_inv_affine_inv = interpn(
             points=template_axes,
             values=phi_inv - template_coords,
