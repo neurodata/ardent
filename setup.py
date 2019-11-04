@@ -2,19 +2,25 @@ import sys
 from setuptools import setup, find_packages
 from pathlib import Path
 
+# whose my daddy
+parent_ = Path(__file__).parent
+
 # Variables defined in __version__.py.
 version_info = {}
-with open(Path(__file__).parent / 'ardent/__version__.py', 'r') as versionFile:
-    exec(versionFile.read(), version_info)
+version_file = parent_ / 'ardent/__version__.py'
+with open(version_file) as VersionFile:
+    exec(VersionFile.read(), version_info)
 
 # Descriptive text contained in README.md.
 with open('README.md', 'r') as readmeFile:
     README = readmeFile.read()
 
 # Requirements defined in requirements.txt.
-with open(Path(__file__).parent / 'requirements.txt', 'r') as requirementsFile:
-    install_requires = requirementsFile.readlines()
+requirements_file = parent_ / 'requirements.txt'
+with open(requirements_filie, 'r') as RequirementsFile:
+    install_requires = RequirementsFile.readlines()
 
+# I think you can do this implicitly in `setup.py`
 def check_python_version():
     """Raises SystemExit when the Python version is too low."""
     if sys.version_info < version_info['__min_python_version__']:
