@@ -144,6 +144,9 @@ class _Lddmm:
             if iteration >= self.num_affine_only_iterations: self._update_velocity_fields(velocity_fields_gradients)
             # Do other things.
             pass
+        
+        # Compute affine_phi in case there were only affine-only iterations.
+        self._compute_affine_phi()
 
         return dict(
             # Core.
@@ -162,6 +165,9 @@ class _Lddmm:
             matching_energies=self.matching_energies,
             regularization_energies=self.matching_energies,
             total_energies=self.total_energies,
+
+            # Debuggers.
+            lddmm=self,
         )
 
 
@@ -211,13 +217,15 @@ class _Lddmm:
 
 
         """
+
+        # Set self.phi_inv to identity.
+        self.phi_inv = np.copy(self.template_coords)
         
         # Reset self.deformed_template_to_t.
         self.deformed_template_to_t = []
-
         for timestep in range(self.num_timesteps):
             # Compute phi_inv.
-            sample_coords = self.template_coords - self.delta_t * self.velocity_fields[..., timestep, :]
+            sample_coords = self.template_coords - self.velocity_fields[..., timestep, :] * self.delta_t
             self.phi_inv = interpn(
                 points=self.template_axes, 
                 values=self.phi_inv - self.template_coords, 
@@ -327,13 +335,12 @@ class _Lddmm:
 
         matching_energy = (
             np.sum((self.contrast_deformed_template - self.target)**2 * self.matching_weights) * 
-            1/(2 * self.sigmaR**2) * np.prod(self.target_resolution)
+            1/(2 * self.sigmaM**2) * np.prod(self.target_resolution)
         )
 
-        # ER = torch.sum(torch.sum(torch.sum(torch.abs(self.vhat)**2,dim=(-1,1,0))*self.LLhat)) * (self.dt*torch.prod(self.dxI)/2.0/self.sigmaR**2/torch.numel(self.I))
         regularization_energy = (
-            np.sum((np.abs(self.fourier_velocity_fields) * self.fourier_high_pass_filter[..., None, None])**2) * 
-            1/(2 * self.sigmaR**2) * np.prod(self.template_resolution) / self.delta_t / self.template.size
+            np.sum(np.sum(np.abs(self.fourier_velocity_fields)**2, axis=(-1,-2)) * self.fourier_high_pass_filter) * 
+            (np.prod(self.template_resolution) * self.delta_t / (2 * self.sigmaR**2) / self.template.size)
         )
 
         total_energy = matching_energy + regularization_energy
@@ -429,7 +436,7 @@ class _Lddmm:
         matching_affine_inv_gradient = deformed_template_gradient_broadcast * np.expand_dims(homogenous_target_coords, -2)
 
         # Get error term.
-        matching_error_prime = (self.contrast_deformed_template - self.target) * self.matching_weights
+        matching_error_prime = (self.contrast_deformed_template - self.target) * self.matching_weights / self.sigmaM**2
         contrast_map_prime = np.zeros_like(self.target, float)
         for power in range(1, self.contrast_order + 1):
             contrast_map_prime += power * self.deformed_template**(power - 1) * self.contrast_coefficients[power]
@@ -441,17 +448,21 @@ class _Lddmm:
 
 
     def _update_affine(self, affine_inv_gradient):
+
+        linear_and_translational_stepsize_matrix = np.zeros((4,4))
+        linear_and_translational_stepsize_matrix[:3, :3] = self.linear_stepsize
+        linear_and_translational_stepsize_matrix[:3, 3] = self.translational_stepsize
         
         affine_inv = inv(self.affine)
 
-        affine_inv += affine_inv_gradient * self.linear_stepsize
+        affine_inv -= affine_inv_gradient * linear_and_translational_stepsize_matrix
 
         self.affine = inv(affine_inv)
 
 
     def _compute_velocity_fields_gradients(self):
 
-        matching_error_prime = (self.contrast_deformed_template - self.target) * self.matching_weights
+        matching_error_prime = (self.contrast_deformed_template - self.target) * self.matching_weights / self.sigmaM**2
         contrast_map_prime = np.zeros_like(self.target, float)
         for power in range(1, self.contrast_order + 1):
             contrast_map_prime += power * self.deformed_template**(power - 1) * self.contrast_coefficients[power]
@@ -463,7 +474,7 @@ class _Lddmm:
 
         # Loop backwards across time.
         d_matching_d_velocities = []
-        for timestep in range(self.num_timesteps - 1, -1, -1):
+        for timestep in reversed(range(self.num_timesteps)):
 
             # Update phi.
             sample_coords = self.template_coords + self.velocity_fields[..., timestep, :] * self.delta_t
@@ -504,7 +515,7 @@ class _Lddmm:
             # (the error deformed to time t), 
             # (the template gradient deformed to time t), 
             # & (the determinant of the jacobian of the transformation).
-            d_matching_d_velocity_at_t = np.expand_dims(error_at_t * det_grad_phi, -1) * deformed_template_to_t_gradient * (-1.0/self.sigmaM**2) * det(self.affine)
+            d_matching_d_velocity_at_t = np.expand_dims(error_at_t * det_grad_phi, -1) * deformed_template_to_t_gradient * (-1.0) * det(self.affine)
 
             # To convert from derivative to gradient we smooth by applying a low-pass filter in the frequency domain.
             matching_cost_at_t_gradient = np.fft.fftn(d_matching_d_velocity_at_t, axes=(0,1,2)) * np.expand_dims(self.low_pass_filter, -1)
@@ -523,6 +534,31 @@ class _Lddmm:
 
             for timestep in range(self.num_timesteps):
                 self.velocity_fields[...,timestep,:] -= velocity_fields_gradients[timestep] * self.deformative_stepsize
+
+    
+    def _compute_affine_phi(self):
+
+        # Set self.phi to identity. self.phi is secretly phi_1t_inv but at the end of the loop 
+        # it will be phi_10_inv = phi_01 = phi.
+        self.phi = np.copy(self.template_coords)
+
+        # Loop backwards across time.
+        for timestep in reversed(range(self.num_timesteps)):
+
+            # Update phi.
+            sample_coords = self.template_coords + self.velocity_fields[..., timestep, :] * self.delta_t
+            self.phi = interpn(
+                points=self.template_axes, 
+                values=self.phi - self.template_coords, 
+                xi=sample_coords, 
+                bounds_error=False, 
+                fill_value=None, 
+            ) + sample_coords
+
+            # Apply affine by multiplication.
+            # This transforms error in the target space back to time t.
+            self.affine_phi = _multiply_by_affine(self.phi, self.affine)
+        
 
     # End _Lddmm.
 
@@ -576,8 +612,9 @@ def register(template, target, template_resolution=1, target_resolution=1,
         target=target,
         template_resolution=template_resolution,
         target_resolution=target_resolution,
-        num_timesteps=num_timesteps,
+        num_iterations=num_iterations,
         num_affine_only_iterations=num_affine_only_iterations,
+        num_timesteps=num_timesteps,
         initial_affine=initial_affine,
         initial_velocity_fields=initial_velocity_fields,
         contrast_order=contrast_order,
@@ -596,7 +633,6 @@ def _generate_position_field(affine, velocity_fields, velocity_field_resolution,
 template_shape, template_resolution, target_shape, target_resolution, deform_to="template"):
 
     # Validate inputs.
-
     # Validate template_shape. Not rigorous.
     template_shape = _validate_ndarray(template_shape)
     # Validate target_shape. Not rigorous.
@@ -632,8 +668,7 @@ template_shape, template_resolution, target_shape, target_resolution, deform_to=
         phi_inv = np.copy(template_coords)
 
     # Integrate velocity field.
-    for timestep in (range(num_timesteps - 1, -1, -1) if deform_to == "template" 
-        else range(0, num_timesteps)):
+    for timestep in (reversed(range(num_timesteps)) if deform_to == "template" else range(num_timesteps)):
         if deform_to == "template":
             sample_coords = template_coords + velocity_fields[..., timestep, :] * delta_t
             phi = interpn(
