@@ -2,7 +2,7 @@ preset_parameters = {}
 
 # Define registration parameter presets.
 preset_parameters.update({'identity'          : dict(eT=0,    eL=0,     eV=0,    sigmaR=0, naffine=0, niter=1)})
-preset_parameters.update({'clarity, mouse'    : dict(eT=1e-7, eL=1e-10, eV=2e0,  sigmaR=2e1)})
+preset_parameters.update({'clarity, mouse'    : dict(eT=1e-5, eL=5e-8,  eV=5e-1, sigmaR=2e1)})
 preset_parameters.update({'nissl, mouse'      : dict(eT=2e-9, eL=1e-13, eV=5e-4, sigmaR=1e0)})
 preset_parameters.update({'mri, human'        : dict(eT=1e-9, eL=5e-13, eV=5e-4, sigmaR=1e0)})
 # preset_parameters.update({'clarity' : dict(sigmaR=1e1, eV=5e-1, eL=2e-8, eT=2e-5)}) # TODO: remove deprecated 'clarity' preset.
