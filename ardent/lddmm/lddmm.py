@@ -314,14 +314,14 @@ class _Lddmm:
 
         # We do this so we can use the optimal gradient descent.
         # The format is used so that we could substitute a different approach to computing the gradient.
-        contrast_coefficients_gradient = optimal_contrast_coefficients - self.contrast_coefficients
+        contrast_coefficients_gradient = self.contrast_coefficients - optimal_contrast_coefficients
 
         return contrast_coefficients_gradient
 
 
     def _update_contrast_map(self, contrast_map_gradient):
 
-        self.contrast_coefficients += contrast_map_gradient * self.contrast_stepsize
+        self.contrast_coefficients -= contrast_map_gradient * self.contrast_stepsize
 
 
     def _compute_affine_inv_gradient(self):
