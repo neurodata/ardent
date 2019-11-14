@@ -180,12 +180,12 @@ class Transformer:
     def step_v(self, eV=0.0):
         ''' One step of gradient descent for velocity field v'''
         # get error
-        err = (self.fAphiI - self.J)*self.WM
+        err = (self.fAphiI - self.J)*self.WM # derivative of matching wrt it's arg
         # propagate error through poly
         Df = torch.zeros(self.nxJ, device=self.device, dtype=self.dtype)            
         for o in range(1,self.order):
             Df +=  o * self.AphiI**(o-1) *self.coeffs[o]
-        errDf = err * Df
+        errDf = err * Df # derivative of matching wrt the transformed image
         # deform back through flow
         self.phi = self.XI.clone().detach() # torch recommended way to make a copy
         for t in range(self.nt-1,-1,-1):
@@ -202,6 +202,7 @@ class Transformer:
                 + Dphi[0][2]*(Dphi[1][0]*Dphi[2][1] - Dphi[1][1]*Dphi[2][0])
             # pull back error
             errDft = self.interp3(self.xJ,errDf,self.Aphi)
+            
             # gradient of image
             DI = self.gradient(self.It[t],self.dxI)
             # the gradient, error, times, determinant, times image grad
@@ -221,7 +222,7 @@ class Transformer:
         # get error
         err = (self.fAphiI - self.J)*self.WM
         # energy gradient with respect to affine transform
-        DfAphiI = self.gradient(self.AphiI,dx=self.dxJ)
+        DfAphiI = self.gradient(self.fAphiI,dx=self.dxJ)
         DfAphiI0 = torch.cat((DfAphiI,torch.zeros(self.nxJ,dtype=self.dtype,device=self.device)[None]))
         # gradient should go down a row, X across a column
         AiXo = torch.cat((self.AiX,torch.ones(self.nxJ,dtype=self.dtype,device=self.device)[None]))

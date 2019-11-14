@@ -3,7 +3,6 @@ from .normalization import normalize_by_MAD
 from .normalization import center_to_mean
 from .normalization import pad
 
-from .resampling import downsample_image
 from .resampling import change_resolution_to
 from .resampling import change_resolution_by
 

@@ -4,6 +4,10 @@ import numpy as np
 
 from ardent.utilities import _validate_scalar_to_multi
 from ardent.utilities import _validate_ndarray
+from ardent.utilities import _validate_xyz_resolution
+from ardent.utilities import _compute_axes
+from ardent.utilities import _compute_coords
+from ardent.utilities import _multiply_by_affine # TODO: write test for this function.
 
 """
 Test _validate_scalar_to_multi.
