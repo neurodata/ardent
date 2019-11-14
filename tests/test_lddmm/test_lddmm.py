@@ -353,64 +353,6 @@ def test_apply_transform(deform_to):
     assert np.array_equal(deformed_subject, expected_output)
 
 
-@pytest.mark.skip
-def test_it_runs(): # TODO: delete test
-
-    # Test identity quasi-two-dimensional sphere to sphere registration.
-
-    template = np.array([[[(col-6)**2 + (row-6)**2 <= 4**2 for col in range(13)] for row in range(13)]]*7, float)
-    template_resolution = 1
-    target = np.array([[[(col-6)**2 + (row-6)**2 <= 4**2 for col in range(13)] for row in range(13)]]*7, float)
-    target_resolution = 1
-    translational_stepsize = 0.01
-    linear_stepsize = 0.01
-    deformative_stepsize = 0.01
-    sigmaR = 2
-    num_iterations = 200
-    num_affine_only_iterations = 50
-    initial_affine = np.eye(4)
-    initial_velocity_fields = None
-    num_timesteps = 5
-    contrast_order = 1
-    sigmaM=None
-    smooth_length = None
-
-    reg_output = register(
-        template=template,
-        template_resolution=template_resolution,
-        target=target,
-        target_resolution=target_resolution,
-        translational_stepsize=translational_stepsize,
-        linear_stepsize=linear_stepsize,
-        deformative_stepsize=deformative_stepsize,
-        sigmaR=sigmaR,
-        num_iterations=num_iterations,
-        num_affine_only_iterations=num_affine_only_iterations,
-        initial_affine=initial_affine,
-        initial_velocity_fields=initial_velocity_fields,
-        num_timesteps=num_timesteps,
-        contrast_order=contrast_order,
-        sigmaM=sigmaM,
-        smooth_length=smooth_length,
-    )
-
-    deformed_target = apply_transform(
-        subject=target, 
-        subject_resolution=target_resolution, 
-        deform_to='template', 
-        **reg_output,
-    )
-
-    deformed_template = apply_transform(
-        subject=template, 
-        subject_resolution=template_resolution, 
-        deform_to='target', 
-        **reg_output,
-    )
-
-    assert True # Just 'cuz.
-
-
 def test_register():
     
     # Test identity quasi-two-dimensional sphere to sphere registration.

@@ -22,7 +22,10 @@ from ardent.preprocessing.resampling import change_resolution_to
 '''
 
 class _Lddmm:
-    """Class for storing shared values and objects used in registration and performing the registration via methods. Not intended for direct user interaction."""
+    """
+    Class for storing shared values and objects used in registration and performing the registration via methods.
+    Accessed in a functional manner via the register function; it instantiates an _Lddmm object and calls its register method.
+    """
 
     def __init__(self, template, target, template_resolution=1, target_resolution=1, check_artifacts=False, num_iterations=200, num_affine_only_iterations=50, 
     num_timesteps=5, initial_affine=np.eye(4), initial_velocity_fields = None, contrast_order=1, sigmaM=None, sigmaA=None, smooth_length=None, sigmaR=None, 
@@ -111,6 +114,13 @@ class _Lddmm:
 
 
     def register(self):
+        """
+        Register the template to the target using the current state of the attributes.
+        
+        Return a dictionary of relevant quantities most notably including the transformations:
+            phi_inv_affine_inv is the position field that maps the template to the target.
+            affine_phi is the position field that maps the target to the template.
+        """
 
         # Iteratively perform each step of the registration.
         for iteration in range(self.num_iterations):
@@ -176,46 +186,6 @@ class _Lddmm:
         Calculate phi_inv from v
         Compose on the right with Ainv
         Apply phi_invAinv to template
-
-        requires:
-            template
-            target
-            template_coords
-            target_coords
-            v
-            A
-            contrast_transform_coefficients --> produce outside
-
-        results: 
-            transformed_template_at_each_v_t
-            contrast_transformed_deformed_template
-
-            end result to user: phi_inv, phi_invAinv, contrast_transform_coefficients
-
-        ==============================================================================
-
-        used in holder:
-            num_timesteps
-            delta_t
-            velocity_fields
-
-            template_axes
-            template_coords
-            target_coords
-
-            affine
-            template
-
-            contrast_coefficients
-            
-
-        set in holder:
-            phi_inv
-            affine_inv
-            phi_inv_affine_inv
-            deformed_template
-
-
         """
 
         # Set self.phi_inv to identity.
@@ -277,13 +247,6 @@ class _Lddmm:
     def _apply_contrast_map(self):
         """
         Apply contrast_coefficients to deformed_template to produce contrast_deformed_template.
-        
-        used in holder:
-            contrast_coefficients
-            B
-
-        set in holder:
-            contrast_deformed_template
         """
 
         self.contrast_deformed_template = np.matmul(self.B, self.contrast_coefficients).reshape(self.target.shape)
@@ -292,16 +255,6 @@ class _Lddmm:
     def _compute_weights(self):
         """
         Compute the matching_weights between the contrast_deformed_template and the target.
-
-        used in holder:
-            contrast_deformed_template
-            target
-            sigmaM
-            sigmaA
-            ca?
-
-        set in holder:
-            matching_weights
         """
         # TODO: rename.
         
@@ -316,18 +269,7 @@ class _Lddmm:
     def _compute_cost(self):
         """
         Compute the matching cost using a weighted sum of square error.
-
-        used in holder:
-            contrast_deformed_template
-            sigmaM
-            sigmaR
-            matching_weights
-            template_resolution
-            target_resolution
-            fourier_velocity_fields
-            fourier_high_pass_filter
-
-        set in holder:
+        Appends to:
             matching_energies
             regularization_energies
             total_energies
@@ -354,16 +296,6 @@ class _Lddmm:
     def _compute_contrast_map_gradient(self):
         """
         Compute contrast_coefficients mapping deformed_template to target.
-
-        used in holder:
-            deformed_template
-            matching_weights
-            contrast_order
-
-        set in holder:
-            B
-            contrast_coefficients
-
         """
 
         # Ravel necessary components.
