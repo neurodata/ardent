@@ -157,7 +157,7 @@ def test__validate_ndarray():
     
     kwargs = dict(array=np.array([[], 1]), dtype=None, forbid_object_dtype=True)
     expected_exception = TypeError
-    match = "Casting array to a np.ndarray produces an array of dtype object while forbid_object_dtype == True and dtype != object."
+    match = "Casting array to a np.ndarray produces an array of dtype object \nwhile forbid_object_dtype == True and dtype != object."
     with pytest.raises(expected_exception, match=match):
         _validate_ndarray(**kwargs)
 

@@ -660,8 +660,16 @@ def _apply_position_field(subject, subject_resolution, output_resolution, positi
     output_resolution = _validate_xyz_resolution(subject.ndim, output_resolution)
 
     # Resample position_field.
-    position_field = change_resolution_to(position_field, [*position_field_resolution, 1], [*output_resolution, 1])
-
+    if not np.array_equal(position_field_resolution, output_resolution):
+        new_position_field_base_shape = np.ceil(position_field.shape[:-1] * position_field_resolution / output_resolution)
+        position_field = interpn(
+            points=_compute_axes(shape=position_field.shape[:-1], xyz_resolution=position_field_resolution),
+            values=position_field,
+            xi=_compute_coords(shape=new_position_field_base_shape, xyz_resolution=output_resolution),
+            bounds_error=False,
+            fill_value=None,
+        )
+    
     # To make this fully general, accept an output_shape and adjust the position_field to match that shape by interpolating on a grid with arbitrary physical extent.
     # TODO: ^
 
