@@ -88,7 +88,7 @@ class Transform:
                 Defaults to: None.
         
         Returns:
-            None: Sets internal attributes and returns None.
+            NoneType: Sets internal attributes and returns None.
         """
 
         # Collect registration parameters from chosen caller.
