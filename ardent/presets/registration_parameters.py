@@ -1,11 +1,11 @@
 preset_parameters = {}
 
 # Define registration parameter presets.
-preset_parameters.update({'identity'          : dict(eT=0,    eL=0,     eV=0,    sigmaR=0, naffine=0, niter=1)})
-preset_parameters.update({'clarity, mouse'    : dict(eT=1e-5, eL=5e-8,  eV=5e-1, sigmaR=2e1)})
-preset_parameters.update({'nissl, mouse'      : dict(eT=2e-9, eL=1e-13, eV=5e-4, sigmaR=1e0)})
-preset_parameters.update({'mri, human'        : dict(eT=1e-9, eL=5e-13, eV=5e-4, sigmaR=1e0)})
-# preset_parameters.update({'clarity' : dict(sigmaR=1e1, eV=5e-1, eL=2e-8, eT=2e-5)}) # TODO: remove deprecated 'clarity' preset.
+preset_parameters.update({'identity'          : dict(translational_stepsize=0,    linear_stepsize=0,     deformative_stepsize=0,    sigma_regularization=0, num_affine_only_iterations=0, num_iterations=1)})
+preset_parameters.update({'clarity, mouse'    : dict(translational_stepsize=1e-5, linear_stepsize=5e-8,  deformative_stepsize=5e-1, sigma_regularization=2e1)})
+preset_parameters.update({'nissl, mouse'      : dict(translational_stepsize=2e-9, linear_stepsize=1e-13, deformative_stepsize=5e-4, sigma_regularization=1e0)})
+preset_parameters.update({'mri, human'        : dict(translational_stepsize=1e-9, linear_stepsize=5e-13, deformative_stepsize=5e-4, sigma_regularization=1e0)})
+# preset_parameters.update({'clarity' : dict(sigma_regularization=1e1, deformative_stepsize=5e-1, linear_stepsize=2e-8, translational_stepsize=2e-5)}) # TODO: remove deprecated 'clarity' preset.
 
 
 def get_registration_presets():
