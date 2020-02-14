@@ -533,8 +533,8 @@ def test_register():
 
     # Test deformative and affine quasi-two-dimensional ellipsoid to ellipsoid registration.
 
-    # template has shape (2, 25, 25) and radius 8.
-    template = np.array([[[(col-12)**2 + (row-12)**2 <= 8**2 for col in range(25)] for row in range(25)]]*2, int)
+    # target has shape (2, 21, 29) and semi-radii 6 and 10.
+    template = np.array([[[(col-14)**2/10**2 + (row-10)**2/6**2 <= 1 for col in range(29)] for row in range(21)]]*2, int)
     template_resolution = 1
     # target has shape (2, 21, 29) and semi-radii 6 and 10.
     target = rotate(template, 30, (1,2))
@@ -542,7 +542,7 @@ def test_register():
     translational_stepsize = 0.00001
     linear_stepsize = 0.00001
     deformative_stepsize = 0.5
-    sigmaR = 1e10
+    sigmaR = None
     num_iterations = 200
     num_affine_only_iterations = 50
     initial_affine = np.eye(4)
