@@ -86,9 +86,6 @@ class Transform:
                     'cuda:0'
                     'cpu'
                 Defaults to: None.
-        
-        Returns:
-            NoneType: Sets internal attributes and returns None.
         """
 
         # Collect registration parameters from chosen caller.
