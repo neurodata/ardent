@@ -161,20 +161,6 @@ class Transform:
                     'nissl, mouse'
                     'mri, human'
                 Defaults to: None.
-<<<<<<< HEAD
-            sigmaR (float, optional): Deformation allowance. Defaults to: None.
-            eV (float, optional): Deformation step size. Defaults to: None.
-            eL (float, optional): Linear transformation step size. Defaults to: None.
-            eT (float, optional): Translation step size. Defaults to: None.
-            A (np.ndarray, NoneType, optional): Initial affine transformation. Defaults to: None.
-            v (np.ndarray, optional): Initial velocity field. Defaults to: None.
-            device (NoneType, str, optional): The device to be used with pytorch. If None, will choose 'cuda:0' if cuda is available, else 'cpu'.
-                Valid options:
-                    None
-                    'cuda:0'
-                    'cpu'
-                Defaults to: None.
-=======
             translational_stepsize (float, optional): The stepsize for translational adjustments. Defaults to 0.
             linear_stepsize (float, optional): The stepsize for linear adjustments. Defaults to 0.
             deformative_stepsize (float, optional): The stepsize for deformative adjustments. Defaults to 0.
@@ -193,7 +179,6 @@ class Transform:
             spatially_varying_contrast_map (bool, optional): If True, uses a polynomial per voxel to compute the contrast map rather than a single polynomial. Defaults to False.
             calibrate (bool, optional): A boolean flag indicating whether to accumulate additional intermediate values and display informative plots for calibration purposes. Defaults to False.
             track_progress (bool, optional): If True, a progress update will be printed every 10 iterations of registration. Defaults to False.
->>>>>>> lddmm-dev
         """
 
         # Collect registration parameters.
