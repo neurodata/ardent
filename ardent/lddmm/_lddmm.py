@@ -5,14 +5,14 @@ from scipy.linalg import inv, solve, det
 from scipy.sparse.linalg import cg, LinearOperator
 from matplotlib import pyplot as plt
 
-from ._lddmm_utilities import _validate_ndarray
-from ._lddmm_utilities import _validate_scalar_to_multi
-from ._lddmm_utilities import _validate_resolution
-from ._lddmm_utilities import _compute_axes
-from ._lddmm_utilities import _compute_coords
-from ._lddmm_utilities import _multiply_coords_by_affine
-from ._lddmm_utilities import _compute_tail_determinant
-from ._lddmm_utilities import resample
+from skimage.registration._lddmm_utilities import _validate_ndarray
+from skimage.registration._lddmm_utilities import _validate_scalar_to_multi
+from skimage.registration._lddmm_utilities import _validate_resolution
+from skimage.registration._lddmm_utilities import _compute_axes
+from skimage.registration._lddmm_utilities import _compute_coords
+from skimage.registration._lddmm_utilities import _multiply_coords_by_affine
+from skimage.registration._lddmm_utilities import _compute_tail_determinant
+from skimage.registration._lddmm_utilities import resample
 
 r'''
   _            _       _                         
@@ -55,7 +55,7 @@ class _Lddmm:
         deformative_stepsize=None,
         spatially_varying_contrast_map=False,
         calibrate=False,
-        track_progress=False,
+        track_progress_every_n=0,
     ):    
         # Inputs.
 
@@ -86,7 +86,7 @@ class _Lddmm:
         self.smooth_length = smooth_length or 2 * np.max(self.template_resolution)
         self.spatially_varying_contrast_map = spatially_varying_contrast_map
         self.calibrate = calibrate
-        self.track_progress = track_progress
+        self.track_progress_every_n = int(track_progress_every_n)
 
         # Flags.
         self.check_artifacts = check_artifacts
@@ -164,8 +164,9 @@ class _Lddmm:
 
         # Iteratively perform each step of the registration.
         for iteration in range(self.num_iterations):
-            # If self.track_progress, print progress updates every 10 iterations.
-            if self.track_progress and not iteration%10: print(f"Progress: iteration {iteration}/{self.num_iterations}.")
+            # If self.track_progress_every_n > 0, print progress updates every 10 iterations.
+            if self.track_progress_every_n > 0 and not iteration % self.track_progress_every_n:
+                print(f"Progress: iteration {iteration}/{self.num_iterations}{' affine only' if iteration < self.num_affine_only_iterations}.")
 
             # Forward pass: apply transforms to the template and compute the costs.
 
@@ -683,7 +684,7 @@ def lddmm_register(
     sigma_matching=None,
     spatially_varying_contrast_map=False,
     calibrate=False,
-    track_progress=False,
+    track_progress_every_n=0,
 ):
     """
     Compute a registration between template and target, to be applied with apply_lddmm.
@@ -710,7 +711,7 @@ def lddmm_register(
         sigma_matching (float, optional): A measure of spread. Defaults to None.
         spatially_varying_contrast_map (bool, optional): If True, uses a polynomial per voxel to compute the contrast map rather than a single polynomial. Defaults to False.
         calibrate (bool, optional): A boolean flag indicating whether to accumulate additional intermediate values and display informative plots for calibration purposes. Defaults to False.
-        track_progress (bool, optional): If True, a progress update will be printed every 10 iterations of registration. Defaults to False.
+        track_progress_every_n (int, optional): If positive, a progress update will be printed every track_progress_every_n iterations of registration. Defaults to 0.
     
     Example:
         >>> import numpy as np
@@ -757,7 +758,7 @@ def lddmm_register(
         deformative_stepsize=deformative_stepsize,
         spatially_varying_contrast_map=spatially_varying_contrast_map,
         calibrate=calibrate,
-        track_progress=track_progress,
+        track_progress_every_n=track_progress_every_n,
     )
 
     return lddmm.register()
