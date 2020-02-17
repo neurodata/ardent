@@ -1,4 +1,5 @@
 from . import lddmm # Subpackage.
+from .lddmm import resample # Function.
 
 from .transform import Transform # Class.
 
