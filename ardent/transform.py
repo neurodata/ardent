@@ -121,6 +121,7 @@ class Transform:
 
 
     def register(
+        self,
         template,
         target,
         template_resolution=1,
