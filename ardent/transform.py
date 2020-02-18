@@ -35,6 +35,7 @@ class Transform:
         self.affine_phi=None,
         self.phi_inv_affine_inv=None,
         self.contrast_coefficients=None,
+        self.velocity_fields=None
 
         # Helpers.
         self.template_resolution=None,
@@ -57,6 +58,7 @@ class Transform:
         affine_phi,
         phi_inv_affine_inv,
         contrast_coefficients,
+        velocity_fields,
         # Helpers.
         template_resolution,
         target_resolution,
@@ -78,6 +80,7 @@ class Transform:
         self.affine_phi=affine_phi
         self.phi_inv_affine_inv=phi_inv_affine_inv
         self.contrast_coefficients=contrast_coefficients
+        self.velocity_fields=velocity_fields
 
         # Helpers.
         self.template_resolution=template_resolution
@@ -108,6 +111,7 @@ class Transform:
             affine_phi=self.affine_phi,
             phi_inv_affine_inv=self.phi_inv_affine_inv,
             contrast_coefficients=self.contrast_coefficients,
+            velocity_fields=self.velocity_fields,
             # Helpers.
             template_resolution=self.template_resolution,
             target_resolution=self.target_resolution,
@@ -224,8 +228,8 @@ class Transform:
         # Save registration parameters for the continue_registration method, with the initial_affine, initial_velocity_fields, and initial_contrast_coefficients updated.
         registration_parameters.update(
             initial_affine=lddmm_dict['affine'],
+            initial_contrast_coefficients=lddmm_dict['contrast_coefficients'],
             initial_velocity_fields=lddmm_dict['velocity_fields'],
-            initial_contrast_coefficients=lddmm_dict['contrast_coefficients']
         )
         self._registration_parameters = registration_parameters
 
