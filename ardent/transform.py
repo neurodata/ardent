@@ -146,7 +146,7 @@ class Transform:
         sigma_matching=None,
         spatially_varying_contrast_map=False,
         calibrate=False,
-        track_progress=False,
+        track_progress_every_n=0,
     ):
         """
         Compute a registration between template and target, to be applied with apply_lddmm.
@@ -184,7 +184,7 @@ class Transform:
             sigma_matching (float, optional): A measure of spread. Defaults to None.
             spatially_varying_contrast_map (bool, optional): If True, uses a polynomial per voxel to compute the contrast map rather than a single polynomial. Defaults to False.
             calibrate (bool, optional): A boolean flag indicating whether to accumulate additional intermediate values and display informative plots for calibration purposes. Defaults to False.
-            track_progress (bool, optional): If True, a progress update will be printed every 10 iterations of registration. Defaults to False.
+            track_progress_every_n (int, optional): If positive, a progress update will be printed every track_progress_every_n iterations of registration. Defaults to 0.
         """
 
         # Collect registration parameters.
@@ -211,7 +211,7 @@ class Transform:
             sigma_matching=sigma_matching,
             spatially_varying_contrast_map=spatially_varying_contrast_map,
             calibrate=calibrate,
-            track_progress=track_progress,
+            track_progress_every_n=track_progress_every_n,
         )
 
         # Fill unspecified parameters with presets if applicable.
