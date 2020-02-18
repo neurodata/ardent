@@ -42,6 +42,7 @@ class _Lddmm:
         num_timesteps=5,
         initial_affine=None,
         initial_velocity_fields=None,
+        initial_contrast_coefficients=None,
         smooth_length=None,
         contrast_order=1,
         contrast_tolerance=1e-5,
@@ -126,11 +127,17 @@ class _Lddmm:
             fill_value=None, 
         )
         if spatially_varying_contrast_map:
-            self.contrast_coefficients = np.zeros((*self.target.shape, self.contrast_order + 1))
+            if initial_contrast_coefficients is None:
+                self.contrast_coefficients = np.zeros((*self.target.shape, self.contrast_order + 1))
+            else:
+                self.contrast_coefficients = _validate_ndarray(initial_contrast_coefficients, broadcast_to_shape=(*self.target.shape, self.contrast_order + 1))
         else:
-            self.contrast_coefficients = np.zeros(self.contrast_order + 1)
+            if initial_contrast_coefficients is None:
+                self.contrast_coefficients = np.zeros(self.contrast_order + 1)
+            else:
+                self.contrast_coefficients = _validate_ndarray(initial_contrast_coefficients, broadcast_to_shape=(self.contrast_order + 1))
         self.contrast_coefficients[..., 0] = np.mean(self.target) - np.mean(self.template) * np.std(self.target) / np.std(self.template)
-        self.contrast_coefficients[..., 1] = np.std(self.target) / np.std(self.template)
+        if self.contrast_order > 1: self.contrast_coefficients[..., 1] = np.std(self.target) / np.std(self.template)
         self.contrast_polynomial_basis = np.empty((*self.target.shape, self.contrast_order + 1))
         for power in range(self.contrast_order + 1):
             self.contrast_polynomial_basis[..., power] = self.deformed_template**power
@@ -211,6 +218,7 @@ class _Lddmm:
             affine_phi=self.affine_phi,
             phi_inv_affine_inv=self.phi_inv_affine_inv,
             contrast_coefficients=self.contrast_coefficients,
+            velocity_fields=self.velocity_fields,
 
             # Helpers.
             template_resolution=self.template_resolution,
@@ -675,6 +683,7 @@ def lddmm_register(
     num_affine_only_iterations=50,
     initial_affine=None,
     initial_velocity_fields=None,
+    initial_contrast_coefficients=None,
     num_timesteps=5,
     smooth_length=None,
     contrast_order=1,
@@ -702,6 +711,10 @@ def lddmm_register(
         num_affine_only_iterations (int, optional): The number of iterations at the start of the process without deformative adjustments. Defaults to 50.
         initial_affine (np.ndarray, optional): The affine array that the registration will begin with. Defaults to np.eye(template.ndim + 1).
         initial_velocity_fields (np.ndarray, optional): The velocity fields that the registration will begin with. Defaults to None.
+        initial_contrast_coefficients (np.ndarray, optional): The contrast coefficients that the registration will begin with. 
+            If None, the 0th order coefficient(s) are set to np.mean(self.target) - np.mean(self.template) * np.std(self.target) / np.std(self.template), 
+            if self.contrast_order > 1, the 1st order coefficient(s) are set to np.std(self.target) / np.std(self.template), 
+            and all others are set to zero. Defaults to None.
         num_timesteps (int, optional): The number of composed sub-transformations in the diffeomorphism. Defaults to 5.
         smooth_length (float, optional): The length scale of smoothing. Defaults to None.
         contrast_order (int, optional): The order of the polynomial fit between the contrasts of the template and target. Defaults to 3.
@@ -746,6 +759,7 @@ def lddmm_register(
         num_timesteps=num_timesteps,
         initial_affine=initial_affine,
         initial_velocity_fields=initial_velocity_fields,
+        initial_contrast_coefficients=initial_contrast_coefficients,
         smooth_length=smooth_length,
         contrast_order=contrast_order,
         contrast_tolerance=contrast_tolerance,
