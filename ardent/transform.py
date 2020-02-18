@@ -136,6 +136,7 @@ class Transform:
         num_affine_only_iterations=50,
         initial_affine=None,
         initial_velocity_fields=None,
+        initial_contrast_coefficients=None,
         num_timesteps=5,
         smooth_length=None,
         contrast_order=1,
@@ -170,6 +171,10 @@ class Transform:
             num_affine_only_iterations (int, optional): The number of iterations at the start of the process without deformative adjustments. Defaults to 50.
             initial_affine (np.ndarray, optional): The affine array that the registration will begin with. Defaults to np.eye(template.ndim + 1).
             initial_velocity_fields (np.ndarray, optional): The velocity fields that the registration will begin with. Defaults to None.
+            initial_contrast_coefficients (np.ndarray, optional): The contrast coefficients that the registration will begin with. 
+                If None, the 0th order coefficient(s) are set to np.mean(self.target) - np.mean(self.template) * np.std(self.target) / np.std(self.template), 
+                if self.contrast_order > 1, the 1st order coefficient(s) are set to np.std(self.target) / np.std(self.template), 
+                and all others are set to zero. Defaults to None.
             num_timesteps (int, optional): The number of composed sub-transformations in the diffeomorphism. Defaults to 5.
             smooth_length (float, optional): The length scale of smoothing. Defaults to None.
             contrast_order (int, optional): The order of the polynomial fit between the contrasts of the template and target. Defaults to 3.
@@ -196,6 +201,7 @@ class Transform:
             num_affine_only_iterations=num_affine_only_iterations,
             initial_affine=initial_affine,
             initial_velocity_fields=initial_velocity_fields,
+            initial_contrast_coefficients=initial_contrast_coefficients,
             num_timesteps=num_timesteps,
             smooth_length=smooth_length,
             contrast_order=contrast_order,
@@ -215,10 +221,11 @@ class Transform:
         # Perform registration.
         lddmm_dict = lddmm_register(**registration_parameters)
 
-        # Save registration parameters for the continue_registration method, with the initial_affine and initial_velocity_fields updated.
+        # Save registration parameters for the continue_registration method, with the initial_affine, initial_velocity_fields, and initial_contrast_coefficients updated.
         registration_parameters.update(
             initial_affine=lddmm_dict['affine'],
-            initial_velocity_fields=lddmm_dict['initial_velocity_fields'],
+            initial_velocity_fields=lddmm_dict['velocity_fields'],
+            initial_contrast_coefficients=lddmm_dict['contrast_coefficients']
         )
         self._registration_parameters = registration_parameters
 
@@ -229,8 +236,8 @@ class Transform:
     def continue_registration(self, **registration_parameter_updates):
         """
         Continue registering with all the same registration parameters from the previous call to the register method, 
-        but with initial_affine and initial_velocity_fields set to the affine and velocity_fields most recently calculated in the register method,
-        updated by registration_parameter_updates.
+        but with initial_affine, initial_velocity_fields, and initial_contrast_coefficients set to the affine, velocity_fields, and contrast_coefficients 
+        most recently calculated in the register method, updated by registration_parameter_updates.
 
         Kwargs:
             registration_parameter_updates (key-value pairs, optional): registration parameters provided as kwargs 

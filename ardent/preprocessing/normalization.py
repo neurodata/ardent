@@ -59,21 +59,24 @@ def center_to_mean(data):
     return centered_data
 
 
-def pad(data, pad_width=5, mode='constant', constant_values=0):
+def pad(data, pad_width=10, mode='constant', constant_values=None):
     """
     Returns a padded copy of data.
     
     Args:
         data (np.ndarray): The array to be padded.
-        pad_width (int, optional): The amount by which to pad. Defaults to 5.
+        pad_width (int, optional): The amount by which to pad. Defaults to 10.
         mode (str, optional): The padding mode used in np.pad. Defaults to 'constant'.
-        constant_values (float, optional): The values to use in padding if mode='constant'. Defaults to 0.
+        constant_values (float, optional): The values to use in padding if mode='constant' If None, this is set to np.quantile(data, 10**-data.ndim). Defaults to None.
     
     Returns:
         np.ndarray: The padded copy of data.
     """
 
     _verify_data_is_ndarray(data)
+
+    if constant_values is None:
+        constant_values = np.quantile(data, 10**-data.ndim)
 
     pad_kwargs = {'array':data, 'pad_width':pad_width, 'mode':mode}
     if mode == 'constant': pad_kwargs.update(constant_values=constant_values)
