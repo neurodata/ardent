@@ -32,7 +32,7 @@ class Transform:
         self.affine=None,
         self.phi=None,
         self.phi_inv=None,
-        self.affine_inv=None,
+        self.affine_phi=None,
         self.phi_inv_affine_inv=None,
         self.contrast_coefficients=None,
 
@@ -54,7 +54,7 @@ class Transform:
         affine,
         phi,
         phi_inv,
-        affine_inv,
+        affine_phi,
         phi_inv_affine_inv,
         contrast_coefficients,
         # Helpers.
@@ -105,7 +105,7 @@ class Transform:
             affine=self.affine,
             phi=self.phi,
             phi_inv=self.phi_inv,
-            affine_inv=self.affine_inv,
+            affine_phi=self.affine_phi,
             phi_inv_affine_inv=self.phi_inv_affine_inv,
             contrast_coefficients=self.contrast_coefficients,
             # Helpers.
