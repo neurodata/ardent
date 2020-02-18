@@ -173,7 +173,7 @@ class _Lddmm:
         for iteration in range(self.num_iterations):
             # If self.track_progress_every_n > 0, print progress updates every 10 iterations.
             if self.track_progress_every_n > 0 and not iteration % self.track_progress_every_n:
-                print(f"Progress: iteration {iteration}/{self.num_iterations}{' affine only' if iteration < self.num_affine_only_iterations}.")
+                print(f"Progress: iteration {iteration}/{self.num_iterations}{' affine only' if iteration < self.num_affine_only_iterations else ''}.")
 
             # Forward pass: apply transforms to the template and compute the costs.
 
