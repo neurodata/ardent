@@ -940,11 +940,11 @@ def apply_lddmm(
     Args:
         subject (np.ndarray): The image to be deformed to the template or target from the results of the register function.
         subject_resolution (float, seq, optional): The resolution of subject in each dimension, or just one scalar to indicate isotropy. Defaults to 1.
-        output_resolution (NoneType, float, seq, optional): The resolution of the output deformed_subject in each dimension, 
+        output_resolution (float, seq, optional): The resolution of the output deformed_subject in each dimension, 
             or just one scalar to indicate isotropy, or None to indicate the resolution of template or target based on deform_to. 
             Defaults to None.
         deform_to (str, optional): Either "template" or "target", indicating which position field to apply to subject. Defaults to "template".
-        extrapolation_fill_value (float, NoneType, optional): The fill_value kwarg passed to scipy.interpolate.interpn. 
+        extrapolation_fill_value (float, optional): The fill_value kwarg passed to scipy.interpolate.interpn. 
             If None, this is set to a low quantile of the subject's 10**-subject.ndim quantile to estimate background. Defaults to None.
         affine_phi (np.ndarray, optional): The position field in the shape of the template for deforming to the template. Defaults to None.
         phi_inv_affine_inv (np.ndarray, optional): The position field in the shape of the target for deforming to the target. Defaults to None.
