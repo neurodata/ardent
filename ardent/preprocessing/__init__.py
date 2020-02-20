@@ -3,19 +3,18 @@ from .normalization import normalize_by_MAD
 from .normalization import center_to_mean
 from .normalization import pad
 
-from .resampling import change_resolution_to
-from .resampling import change_resolution_by
+from .bias_and_artifact_correction import correct_bias_field
 
-# TODO: update preprocessing_functions.
+
+# TODO: update preprocessing_functions, include resample.
 preprocessing_functions = [
+    # from .normalization:
     'cast_to_typed_array',
     'normalize_by_MAD',
     'center_to_mean',
     'pad',
-
-    'downsample_image',
-    'change_resolution_to',
-    'change_resolution_by',
+    # from .bias_and_artifact_correction:
+    'correct_bias_field',
     ]
 
 """
@@ -25,7 +24,7 @@ Preprocessing Pipeline
 import numpy as np
 
 # TODO: incorporate arguments.
-def preprocess(data:(np.ndarray, list), processes:list):
+def preprocess(data, processes, process_arguments=None):
     """
     Perform each preprocessing function in processes, in the order listed, 
     on data if it is an array, or on each element in data if it is a list of arrays.
@@ -33,6 +32,7 @@ def preprocess(data:(np.ndarray, list), processes:list):
     Args:
         data (np.ndarray, list): The array or list of arrays to be preprocessed.
         processes (list): The list of strings, each corresponding to the name of a preprocessing function.
+        process_arguments (list, optional): The list of
     
     Raises:
         TypeError: Raised if data is a list whose elements are not all of type np.ndarray.

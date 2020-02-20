@@ -5,7 +5,7 @@ from .transform import Transform # Class.
 
 from .visualization import heatslices # Function.
 
-from .io import save, load # Functions.
+from .file_io import save, load # Functions.
 
 from . import preprocessing # Subpackage.
 from .preprocessing import preprocess # Function.

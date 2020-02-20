@@ -1,73 +1,32 @@
 import numpy as np
 import SimpleITK as sitk
 from scipy.ndimage.filters import gaussian_filter
-from ardent.preprocessing import change_resolution_by
+from ardent.lddmm._lddmm_utilities import resample
 
-def correct_bias_field(img, mask=None, scale=0.25, niters=[50, 50, 50, 50]):
-    """Correct bias field in image using the N4ITK algorithm (http://bit.ly/2oFwAun)
-    Parameters:
-    ----------
-    img : {SimpleITK.SimpleITK.Image}
-        Input image with bias field.
-    mask : {SimpleITK.SimpleITK.Image}, optional
-        If used, the bias field will only be corrected within the mask. (the default is None, which results in the whole image being corrected.)
-    scale : {float}, optional
-        Scale at which to compute the bias correction. (the default is 0.25, which results in bias correction computed on an image downsampled to 1/4 of it's original size)
-    niters : {list}, optional
-        Number of iterations per resolution. Each additional entry in the list adds an additional resolution at which the bias is estimated. (the default is [50, 50, 50, 50] which results in 50 iterations per resolution at 4 resolutions)
-    Returns
-    -------
-    SimpleITK.SimpleITK.Image
-        Bias-corrected image that has the same size and spacing as the input image.
+
+def correct_bias_field(image, correct_at_scale=4, **kwargs):
+    """
+    Shifts image such that its minimum value is 1, computes the bias field after downsampling by correct_at_scale, 
+    upsamples this bias field and applies it to the shifted image, then undoes the shift and returns the result.
+    Computes bias field using sitk.N4BiasFieldCorrection (http://bit.ly/2oFwAun).
+    
+    Args:
+        image (np.ndarray): The image to be bias corrected.
+        correct_at_scale (float, optional): The factor by which image is downsampled before computing the bias. Defaults to 4.
+
+    Kwargs:
+        Any additional keyword arguments overwrite the default values passed to sitk.N4BiasFieldCorrection.
+    
+    Returns:
+        np.ndarray: A copy of image after bias correction.
     """
 
-    '''
-    img_rescaled = img + 0.1 * stdev
-    spacing = img_rescaled.spacing / scale
-    img_resampled = resample(img_rescaled, spacing=spacing)
+    # Shift image such that its minimum value lies at 1.
+    image_min = image.min()
+    image = image - image_min + 1
 
-    img_bias_corrected = sitk.N4BiasFieldCorrection(img_resampled, mask, 0.001, niters)
-    bias = img_bias_corrected / img_resampled
-    bias = resample(bias, spacing=img.spacing, size=img.size)
-
-    img_bias_corrected = img * bias
-    '''
-
-
-
-    '''
-    img_rescaled = img + 0.1 * stdev
-    spacing = img_rescaled.spacing / scale
-    img_resampled = resample(img_rescaled, spacing=spacing)
-
-    img_bias_corrected = sitk.N4BiasFieldCorrection(img_resampled, mask, 0.001, niters)
-    bias = img_bias_corrected / img_resampled
-    bias = resample(bias, spacing=img.spacing, size=img.size)
-
-    img_bias_corrected = img * bias
-    '''
-
-# TODO: rewrite this function but better. Scale based on values within x stdevs and raise min to 1?
-def scale_array(array):
-    """Scale array to the range [1,2]."""
-
-    array = np.copy(array)
-
-    array -= np.min(array)
-    array /= np.max(array)
-    array += 1
-
-    return array
-
-
-def correct_bias_field(image, xyz_resolution, scale=0.25, **kwargs):
-    '''Who cares if the image has 0 intensities?'''
-
-    # Scale image to the interval [1,2].
-    image = scale_array(image)
-
-    # Downsample image according to <scale>.
-    downsampled_image, downsampled_resolution = change_resolution_by(image, scale, return_true_resolution=True)
+    # Downsample image according to scale.
+    downsampled_image = resample(image, correct_at_scale)
 
     # Bias-correct downsampled_image.
     N4BiasFieldCorrection_kwargs = dict(
@@ -91,14 +50,18 @@ def correct_bias_field(image, xyz_resolution, scale=0.25, **kwargs):
     downsample_computed_bias = bias_corrected_downsampled_image / downsampled_image
 
     # Upsample bias.
-    upsampled_bias = change_resolution_by(downsample_computed_bias, downsampled_resolution)
+    upsampled_bias = resample(downsample_computed_bias, correct_at_scale)
 
-    # Apply upsampled bias to original image.
+    # Apply upsampled bias to original resolution shifted image.
     bias_corrected_image = image * upsampled_bias
+
+    # Reverse the initial shift.
+    bias_corrected_image += image_min - 1
 
     return bias_corrected_image
 
 
+# TODO: complete function and import in preprocessing/__init__.py.
 def remove_grid_artifact(image, z_axis=1, sigma=10, mask=None):
     """Remove the grid artifact from tiled data."""
 
