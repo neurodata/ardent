@@ -6,8 +6,7 @@ import pickle
 
 from .presets import get_registration_preset
 from .lddmm._lddmm import lddmm_register, apply_lddmm
-# TODO: rename io as fileio to avoid conflict with standard library package io?
-from . import io
+from . import file_io
 
 
 class Transform:
@@ -290,7 +289,7 @@ class Transform:
         )
         
         if save_path is not None:
-            io.save(deformed_subject, save_path)
+            file_io.save(deformed_subject, save_path)
 
         return deformed_subject
 
@@ -303,7 +302,7 @@ class Transform:
             file_path (str, Path): The full path to save self to.
         """
 
-        io.save_pickled(self, file_path)
+        file_io.save_pickled(self, file_path)
 
 
     def load(self, file_path):
@@ -315,6 +314,6 @@ class Transform:
             file_path (str, Path): The full path that a Transform object was saved to.
         """
 
-        transform = io.load_pickled(file_path)
+        transform = file_io.load_pickled(file_path)
 
         self.__dict__.update(transform.__dict__)
