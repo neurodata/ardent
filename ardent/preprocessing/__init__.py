@@ -67,7 +67,7 @@ def preprocess(data, processes, process_kwargs=None):
 
     # Verify process_kwargs.
     if process_kwargs is None:
-        process_kwargs = np.full_like(processes, fill_value=dict())
+        process_kwargs = np.full_like(processes, fill_value=dict(), dtype=dict)
     process_kwargs = np.array(process_kwargs)
     if len(process_kwargs) != len(processes):
         raise ValueError(f"If provided, process_kwargs must match the length of processes.\n"
