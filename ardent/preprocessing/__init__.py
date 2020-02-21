@@ -69,7 +69,7 @@ def preprocess(data, processes, process_kwargs=None):
     if process_kwargs is None:
         process_kwargs = np.full_like(processes, fill_value=dict())
     process_kwargs = np.array(process_kwargs)
-    if len(process_kwargs != len(processes)):
+    if len(process_kwargs) != len(processes):
         raise ValueError(f"If provided, process_kwargs must match the length of processes.\n"
                          f"len(process_kwargs): {len(process_kwargs)}.")
     for process_index, process_kwarg in enumerate(process_kwargs):
