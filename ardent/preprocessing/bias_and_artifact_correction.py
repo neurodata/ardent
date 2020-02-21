@@ -61,7 +61,7 @@ def correct_bias_field(image, correct_at_scale=4, as_float32=True, **kwargs):
     downsample_computed_bias = bias_corrected_downsampled_image / downsampled_image
 
     # Upsample bias.
-    upsampled_bias = resample(downsample_computed_bias, correct_at_scale)
+    upsampled_bias = resample(downsample_computed_bias, 1 / correct_at_scale)
 
     # Apply upsampled bias to original resolution shifted image.
     bias_corrected_image = image * upsampled_bias
