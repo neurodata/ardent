@@ -75,7 +75,7 @@ def preprocess(data, processes, process_kwargs=None):
     for process_index, process_kwarg in enumerate(process_kwargs):
         if not isinstance(process_kwarg, dict):
             raise TypeError(f"If provided, process_kwargs must be a sequence containing only dictionaries.\n"
-                            f"type(process_kwargs[process_index]): {type(process_kwargs[process_index])}.")
+                            f"type(process_kwargs[{process_index}]): {type(process_kwargs[process_index])}.")
     
     # Process each np.ndarray.
     # If data was passed in as a single np.ndarray, 
