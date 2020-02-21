@@ -1,10 +1,10 @@
 import numpy as np
 import SimpleITK as sitk
 from scipy.ndimage.filters import gaussian_filter
-from ardent.lddmm._lddmm_utilities import resample
+from skimage.transform import resize, rescale
 
 
-def correct_bias_field(image, correct_at_scale=4, as_float32=True, **kwargs):
+def correct_bias_field(image, correct_at_scale=0.25, as_float32=True, **kwargs):
     """
     Shifts image such that its minimum value is 1, computes the bias field after downsampling by correct_at_scale, 
     upsamples this bias field and applies it to the shifted image, then undoes the shift and returns the result.
@@ -12,7 +12,7 @@ def correct_bias_field(image, correct_at_scale=4, as_float32=True, **kwargs):
     
     Args:
         image (np.ndarray): The image to be bias corrected.
-        correct_at_scale (float, optional): The factor by which image is downsampled before computing the bias. Defaults to 4.
+        correct_at_scale (float, optional): The scale by which the shape of image is reduced before computing the bias. Defaults to 4.
         as_float32 (bool, optional): If True, image is internally cast as a sitk.Image of type sitkFloat32. If False, it is of type sitkFloat64. Defaults to True.
 
     Kwargs:
@@ -27,7 +27,7 @@ def correct_bias_field(image, correct_at_scale=4, as_float32=True, **kwargs):
     image = image - image_min + 1
 
     # Downsample image according to scale.
-    downsampled_image = resample(image, correct_at_scale)
+    downsampled_image = rescale(image, correct_at_scale)
 
     # Bias correct downsampled_image.
     N4BiasFieldCorrection_kwargs = dict(
@@ -61,7 +61,7 @@ def correct_bias_field(image, correct_at_scale=4, as_float32=True, **kwargs):
     downsample_computed_bias = bias_corrected_downsampled_image / downsampled_image
 
     # Upsample bias.
-    upsampled_bias = resample(downsample_computed_bias, 1 / correct_at_scale)
+    upsampled_bias = resize(downsample_computed_bias, image.shape)
 
     # Apply upsampled bias to original resolution shifted image.
     bias_corrected_image = image * upsampled_bias
@@ -74,7 +74,7 @@ def correct_bias_field(image, correct_at_scale=4, as_float32=True, **kwargs):
 
 # TODO: complete function and import in preprocessing/__init__.py.
 def remove_grid_artifact(image, z_axis=1, sigma=10, mask=None):
-    """Remove the grid artifact from tiled data."""
+    """Remove the grid artifact from tiled data - tiles are stacked along z_axis."""
 
     if mask is None:
         mask = np.ones_like(image)
