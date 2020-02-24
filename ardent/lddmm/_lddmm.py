@@ -145,7 +145,7 @@ class _Lddmm:
         fourier_template_coords = _compute_coords(self.template.shape, 1 / (self.template_resolution * self.template.shape), origin='zero')
         self.low_pass_filter = 1 / (
             (1 - self.smooth_length**2 * (
-                np.sum(-2 + 2 * np.cos(2 * np.pi * self.template_resolution * fourier_template_coords) / self.template_resolution**2, -1)
+                np.sum((-2 + 2 * np.cos(2 * np.pi * self.template_resolution * fourier_template_coords)) / self.template_resolution**2, -1)
                 )
             )**self.fourier_high_pass_filter_power
         )**2
