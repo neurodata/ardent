@@ -4,7 +4,7 @@ from scipy.ndimage.filters import gaussian_filter
 from skimage.transform import resize, rescale
 
 
-def correct_bias_field(image, correct_at_scale=0.25, as_float32=True, **kwargs):
+def correct_bias_field(image, correct_at_scale=1, as_float32=True, **kwargs):
     """
     Shifts image such that its minimum value is 1, computes the bias field after downsampling by correct_at_scale, 
     upsamples this bias field and applies it to the shifted image, then undoes the shift and returns the result.
