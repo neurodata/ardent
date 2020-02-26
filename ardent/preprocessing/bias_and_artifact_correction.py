@@ -24,6 +24,11 @@ def correct_bias_field(image, correct_at_scale=1, as_float32=True, **kwargs):
         np.ndarray: A copy of image after bias correction.
     """
 
+    # Validate inputs.
+
+    # Validate image.
+    image = _validate_ndarray(image, dtype=float)
+
     # Verify correct_at_scale.
     correct_at_scale = float(correct_at_scale)
     if correct_at_scale < 1:
@@ -92,23 +97,15 @@ def remove_grid_artifact(image, z_axis=0, sigma_blur=10, mask='Otsu'):
             Supported values are:
                 a np.ndarray with a shape corresponding to image.shape, 
                 None, indicating no mask (i.e. all voxels are considered in the artifact correction), 
-                'Otsu', . Defaults to 'Otsu'.
+                'Otsu', indicating that the Otsu threshold will be used to identify foreground and background voxels.
+            Defaults to 'Otsu'.
     
     Returns:
         np.ndarray: A copy of image with its grid artifact removed.
     """
-    test
-    '''Remove the grid artifact from tiled data - tiles are stacked along z_axis.'''
 
-
-    '''
-    takae the mena across z
-    blur the meaan with a gaussian
-    sigma chosen such that when looking at the blurred mean you can no longer make out the gridlines
-    image_corrective_factors = blurred_image / original_image 
-    --> note: original image may have zeros. make it not so. when blurring, make sure all values are still positive. sigma is in units of voxels
-    return image * image_corrective_factors
-    '''
+    # Validate image.
+    image = _validate_ndarray(image, dtype=float)
 
     # Construct masked_image as a ma.MaskedArray.
 
