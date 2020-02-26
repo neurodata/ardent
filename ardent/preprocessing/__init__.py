@@ -4,6 +4,7 @@ from .normalization import center_to_mean
 from .normalization import pad
 
 from .bias_and_artifact_correction import correct_bias_field
+from .bias_and_artifact_correction import remove_grid_artifact
 
 
 # TODO: update preprocessing_functions, include resample.
@@ -15,6 +16,7 @@ preprocessing_functions = [
     'pad',
     # from .bias_and_artifact_correction:
     'correct_bias_field',
+    'remove_grid_artifact',
     ]
 
 """

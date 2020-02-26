@@ -3,6 +3,8 @@ import SimpleITK as sitk
 from scipy.ndimage.filters import gaussian_filter
 from skimage.transform import resize, rescale
 
+from ..lddmm._lddmm_utilities import _validate_ndarray
+
 
 def correct_bias_field(image, correct_at_scale=1, as_float32=True, **kwargs):
     """
@@ -12,7 +14,7 @@ def correct_bias_field(image, correct_at_scale=1, as_float32=True, **kwargs):
     
     Args:
         image (np.ndarray): The image to be bias corrected.
-        correct_at_scale (float, optional): The scale by which the shape of image is reduced before computing the bias. Defaults to 4.
+        correct_at_scale (float, optional): The scale by which the shape of image is reduced before computing the bias. Defaults to 1.
         as_float32 (bool, optional): If True, image is internally cast as a sitk.Image of type sitkFloat32. If False, it is of type sitkFloat64. Defaults to True.
 
     Kwargs:
@@ -21,6 +23,12 @@ def correct_bias_field(image, correct_at_scale=1, as_float32=True, **kwargs):
     Returns:
         np.ndarray: A copy of image after bias correction.
     """
+
+    # Verify correct_at_scale.
+    correct_at_scale = float(correct_at_scale)
+    if correct_at_scale < 1:
+        raise ValueError(f"correct_at_scale must be equal to or greater than 1.\n"
+                         f"correct_at_scale: {correct_at_scale}.")
 
     # Shift image such that its minimum value lies at 1.
     image_min = image.min()
@@ -72,54 +80,69 @@ def correct_bias_field(image, correct_at_scale=1, as_float32=True, **kwargs):
     return bias_corrected_image
 
 
-# TODO: complete function and import in preprocessing/__init__.py.
-def remove_grid_artifact(image, z_axis=1, sigma=10, mask=None):
-    """Remove the grid artifact from tiled data - tiles are stacked along z_axis."""
+def remove_grid_artifact(image, z_axis=0, sigma_blur=10, mask='Otsu'):
+    """
+    Remove the grid artifact from tiled data.
+    
+    Args:
+        image (np.ndarray): The image with a grid artifact.
+        z_axis (int, optional): The axis along which the tiles are stacked. Defaults to 0.
+        sigma_blur (float, optional): The size of the blur used to compute the bias for grid edges in units of voxels. Should be approximately the size of the tiles. Defaults to 10.
+        mask (np.ndarray, str, NoneType, optional): A mask of the valued voxels in the image. 
+            Supported values are:
+                a np.ndarray with a shape corresponding to image.shape, 
+                None, indicating no mask (i.e. all voxels are considered in the artifact correction), 
+                'Otsu', . Defaults to 'Otsu'.
+    
+    Returns:
+        np.ndarray: A copy of image with its grid artifact removed.
+    """
+    test
+    '''Remove the grid artifact from tiled data - tiles are stacked along z_axis.'''
 
+
+    '''
+    takae the mena across z
+    blur the meaan with a gaussian
+    sigma chosen such that when looking at the blurred mean you can no longer make out the gridlines
+    image_corrective_factors = blurred_image / original_image 
+    --> note: original image may have zeros. make it not so. when blurring, make sure all values are still positive. sigma is in units of voxels
+    return image * image_corrective_factors
+    '''
+
+    # Construct masked_image as a ma.MaskedArray.
+
+    # Interpret input mask.
     if mask is None:
         mask = np.ones_like(image)
     elif mask == 'Otsu':
+        # Finds the optimal split threshold between the foreground anad background, by maximizing the interclass variance and minimizing the intraclass variance between voxel intensities.
         sitk_Image_mask = sitk.OtsuThreshold(sitk.GetImageFromArray(image))
         mask = sitk.GetArrayFromImage(sitk_Image_mask)
-        
-    masked_image = image * mask
-
-    # Shift masked_image above 1.
-#     min_value = np.min(masked_image)
-#     masked_image = masked_image - min_value + 1
-
-    print(np.any(np.isnan(masked_image)))
-
-    # Compute masked average.
-    mean_across_z = np.average(masked_image, axis=z_axis)
-    # Correct for the zero-valued elements included in the above average.
-    z_mask_sum = np.sum(mask, axis=z_axis)
-    mean_across_z *= masked_image.shape[z_axis] / np.where(z_mask_sum != 0, z_mask_sum, 1)
-    np.nan_to_num(mean_across_z, copy=False, nan=0)
+    else:
+        mask = _validate_ndarray(mask, reshape_to_shape=image.shape)
+    mask = mask.astype(bool)
     
-    print(np.any(np.isnan(mean_across_z)))
+    # Use the inverse of mask to create masked_image.
+    masked_image = ma.masked_array(image, mask=~mask)
 
-    bias_z_projection = gaussian_filter(mean_across_z, sigma) / mean_across_z
-    bias_z_projection[ np.isinf(bias_z_projection) ] = 1.0
-    
-#     print(np.any(np.isnan(bias_z_projection)))
-    print(np.any(np.isinf(bias_z_projection)))
-    
-    bias_z_image = np.expand_dims(bias_z_projection, z_axis)
-    
-#     print(np.any(np.isnan(bias_z_image)))
-#     print(np.any(np.isnan(masked_image)))
-#     print(masked_image.shape, bias_z_image.shape)
-    
-#     print(masked_image)
-#     print(bias_z_image)
+    # Shift masked_image so that its minimum lies at 1.
+    masked_image_min = np.min(masked_image)
+    masked_image -= masked_image_min - 1
 
-    corrected_masked_image = masked_image * bias_z_image
-    
-    print(corrected_masked_image.shape)
-    print(np.any(np.isnan(corrected_masked_image)))
+    # Correct grid artifacts.
 
-    # Shift corrected_masked_image to account for the initial shift.
-#     corrected_masked_image = corrected_masked_image + min_value - 1
+    # Take the average across z
+    mean_across_z = np.mean(masked_image, axis=z_axis, keepdims=True)
 
-    return corrected_masked_image
+    # Blur the mean with a gaussian.
+    z_projection_bias = gaussian_filter(mean_across_z, sigma_blur) / mean_across_z
+
+    # Apply the z_projection_bias to correct the masked_image.
+    corrected_masked_image = masked_image * z_projection_bias
+
+    # Reverse the shift to restore the original data window.
+    corrected_masked_image += masked_image_min - 1
+
+    # Return the unmasked array.
+    return corrected_masked_image.data
