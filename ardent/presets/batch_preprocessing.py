@@ -37,4 +37,3 @@ def basic_preprocessing_with_pad(data):
     """
 
     return preprocess(data, ['cast_to_typed_array', 'pad', 'normalize_by_MAD', 'center_to_mean'])
-
