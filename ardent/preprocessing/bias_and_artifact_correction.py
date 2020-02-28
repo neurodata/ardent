@@ -2,7 +2,8 @@ import numpy as np
 from numpy import ma
 import SimpleITK as sitk
 from scipy.ndimage.filters import gaussian_filter
-import skimage
+from skimage import morphology
+from skimage.filters import threshold_otsu
 from skimage.transform import resize, rescale
 
 from ..lddmm._lddmm_utilities import _validate_ndarray
@@ -127,12 +128,12 @@ def remove_grid_artifact(image, z_axis=0, sigma_blur=10, mask='Otsu', otsu_nbins
         # Finds the optimal split threshold between the foreground anad background, 
         # by maximizing the interclass variance and minimizing the intraclass variance between voxel intensities, 
         # with he higher-intensity class labeled as 1.
-        otsu_threshold = skimage.filters.threshold_otsu(image, nbins=otsu_nbins)
+        otsu_threshold = threshold_otsu(image, nbins=otsu_nbins)
         mask = np.ones_like(image, bool)
         mask[image <= otsu_threshold if otsu_background_is_dim else image >= otsu_threshold] = 0
-        mask = skimage.morphology.binary_closing(
+        mask = morphology.binary_closing(
             mask, 
-            selem=skimage.morphology.selem.disk(radius=otsu_binary_closing_radius)
+            selem=morphology.selem.disk(radius=otsu_binary_closing_radius)
         )
     else:
         mask = _validate_ndarray(mask, reshape_to_shape=image.shape, dtype=bool)
