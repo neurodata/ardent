@@ -115,7 +115,7 @@ def remove_grid_artifact(image, z_axis=0, sigma_blur=10, mask='Otsu', otsu_nbins
     image = _validate_ndarray(image, dtype=float)
 
     # Validate otsu_binary_closing_radius.
-    otsu_binary_closing_radius = int(otsu_binary_closing_radius) if otsu_binary_closing_radius is not None else np.ceil(np.sqrt(np.max(image.shape)), dtype=int)
+    otsu_binary_closing_radius = int(otsu_binary_closing_radius) if otsu_binary_closing_radius is not None else np.ceil(np.sqrt(np.max(image.shape))).astype(int)
 
 
     # Construct masked_image as a ma.MaskedArray.
