@@ -76,8 +76,8 @@ class _Lddmm:
         self.target = _validate_ndarray(target, required_ndim=self.template.ndim)
 
         # Resolution.
-        self.template_resolution = _validate_scalar_to_multi(template_resolution or 1, self.template.ndim)
-        self.target_resolution = _validate_scalar_to_multi(target_resolution or 1, self.target.ndim)
+        self.template_resolution = _validate_scalar_to_multi(template_resolution if template_resolution is not None else 1, self.template.ndim)
+        self.target_resolution = _validate_scalar_to_multi(target_resolution if target_resolution is not None else 1, self.target.ndim)
 
         # Iterations.
         self.num_iterations = int(num_iterations) if num_iterations is not None else 200
@@ -126,7 +126,7 @@ class _Lddmm:
         if initial_affine is None:
             initial_affine = np.eye(template.ndim + 1)
         self.affine = _validate_ndarray(initial_affine, required_ndim=2, reshape_to_shape=(self.template.ndim + 1, self.template.ndim + 1))
-        self.velocity_fields = initial_velocity_fields or np.zeros((*self.template.shape, self.num_timesteps, self.template.ndim))
+        self.velocity_fields = initial_velocity_fields if initial_velocity_fields is not None else np.zeros((*self.template.shape, self.num_timesteps, self.template.ndim))
         self.phi = np.copy(self.template_coords)
         self.affine_phi = np.copy(self.template_coords)
         self.phi_inv = np.copy(self.template_coords)
