@@ -88,14 +88,15 @@ def correct_bias_field(image, correct_at_scale=1, as_float32=True, **kwargs):
     return bias_corrected_image
 
 
-def remove_grid_artifact(image, z_axis=0, sigma_blur=10, mask='Otsu', otsu_nbins=256, otsu_binary_closing_radius=None, otsu_background_is_dim=True):
+def remove_grid_artifact(image, z_axis=0, sigma_blur=None, mask='Otsu', otsu_nbins=256, otsu_binary_closing_radius=None, otsu_background_is_dim=True):
     """
     Remove the grid artifact from tiled data.
     
     Args:
         image (np.ndarray): The image with a grid artifact.
         z_axis (int, optional): The axis along which the tiles are stacked. Defaults to 0.
-        sigma_blur (float, optional): The size of the blur used to compute the bias for grid edges in units of voxels. Should be approximately the size of the tiles. Defaults to 10.
+        sigma_blur (float, optional): The size of the blur used to compute the bias for grid edges in units of voxels. 
+            Should be approximately the size of the tiles. Defaults to np.ceil(np.sqrt(np.min(image.shape))).
         mask (np.ndarray, str, NoneType, optional): A mask of the valued voxels in the image. 
             Supported values are:
                 a np.ndarray with a shape corresponding to image.shape, 
@@ -103,7 +104,7 @@ def remove_grid_artifact(image, z_axis=0, sigma_blur=10, mask='Otsu', otsu_nbins
                 'Otsu', indicating that the Otsu threshold will be used to identify foreground and background voxels.
             Defaults to 'Otsu'.
         otsu_nbins (int, optional): The number of bins used to calculate the histogram in skimage.filters.threshold_otsu if mask == 'Otsu'. Defaults to 256.
-        otsu_binary_closing_radius (int, optional): The radius of the structuring element given to binary_close if mask == 'Otsu'. Defaults to np.ceil(np.sqrt(max(image.shape)), dtype=int).
+        otsu_binary_closing_radius (int, optional): The radius of the structuring element given to binary_close if mask == 'Otsu'. Defaults to np.ceil(np.sqrt(np.min(image.shape)) / 3).
         otsu_background_is_dim (bool, optional): If True and mask == 'Otsu', when computing the mask it is assumed that the background will have a lower value than the foreground. Defaults to True.
     
     Returns:
@@ -115,25 +116,34 @@ def remove_grid_artifact(image, z_axis=0, sigma_blur=10, mask='Otsu', otsu_nbins
     # Validate image.
     image = _validate_ndarray(image, dtype=float)
 
-    # Validate otsu_binary_closing_radius.
-    otsu_binary_closing_radius = int(otsu_binary_closing_radius) if otsu_binary_closing_radius is not None else np.ceil(np.sqrt(np.max(image.shape))).astype(int)
+    # Validate sigma_blur.
+    sigma_blur = float(sigma_blur) if sigma_blur is not None else np.ceil(np.sqrt(np.min(image.shape)))
 
+    # Validate otsu_binary_closing_radius.
+    otsu_binary_closing_radius = float(otsu_binary_closing_radius) if otsu_binary_closing_radius is not None else np.ceil(np.sqrt(np.min(image.shape)) / 3)
 
     # Construct masked_image as a ma.MaskedArray.
 
     # Interpret input mask.
     if mask is None:
         mask = np.ones_like(image, bool)
-    elif mask == 'Otsu':
+    elif isinstance(mask, str) and mask == 'Otsu':
         # Finds the optimal split threshold between the foreground anad background, 
         # by maximizing the interclass variance and minimizing the intraclass variance between voxel intensities, 
         # with he higher-intensity class labeled as 1.
         otsu_threshold = threshold_otsu(image, nbins=otsu_nbins)
         mask = np.ones_like(image, bool)
+        # Segment image by otsu_threshold.
         mask[image <= otsu_threshold if otsu_background_is_dim else image >= otsu_threshold] = 0
-        mask = morphology.binary_closing(
-            mask, 
-            selem=morphology.selem.disk(radius=otsu_binary_closing_radius)
+        # Perform binary closing and then binary fill hole on image to remove mislabed background voxels inside the foreground regions.
+        mask = sitk.GetArrayFromImage(
+            sitk.BinaryFillhole(
+                sitk.BinaryMorphologicalClosing(
+                    sitk.GetImageFromArray(mask), 
+                    otsu_binary_closing_radius, 
+                    sitk.sitkBall
+                )
+            )
         )
     else:
         mask = _validate_ndarray(mask, reshape_to_shape=image.shape, dtype=bool)
