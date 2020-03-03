@@ -99,7 +99,7 @@ class _Lddmm:
         self.sigma_contrast = float(sigma_contrast) if sigma_contrast else 1e-2
         # Artifact specifiers.
         self.check_artifacts = bool(check_artifacts) if check_artifacts is not None else False
-        self.sigma_artifact = float(sigma_artifact) if sigma_artifact or 5 * self.sigma_matching
+        self.sigma_artifact = float(sigma_artifact) if sigma_artifact else 5 * self.sigma_matching
         # Smoothness vs. accuracy tradeoff.
         self.sigma_matching = float(sigma_matching) if sigma_matching else np.std(self.target)
         # Diagnostic outputs.
