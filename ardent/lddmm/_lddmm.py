@@ -87,9 +87,9 @@ class _Lddmm:
         self.linear_stepsize = float(linear_stepsize) if linear_stepsize is not None else 0
         self.deformative_stepsize = float(deformative_stepsize) if deformative_stepsize is not None else 0
         # Velocity field specifiers.
-        self.sigma_regularization = float(sigma_regularization) or 10 * np.max(self.template_resolution)
-        self.smooth_length = float(smooth_length) or 2 * np.max(self.template_resolution)
-        self.num_timesteps = int(num_timesteps) or 5
+        self.sigma_regularization = float(sigma_regularization) if sigma_regularization is not None else 10 * np.max(self.template_resolution)
+        self.smooth_length = float(smooth_length) if smooth_length is not None else 2 * np.max(self.template_resolution)
+        self.num_timesteps = int(num_timesteps) if num_timesteps is not None else 5
         # Contrast map specifiers.
         self.contrast_order = int(contrast_order) if contrast_order else 1
         if self.contrast_order < 1: raise ValueError(f"contrast_order must be at least 1.\ncontrast_order: {self.contrast_order}")
