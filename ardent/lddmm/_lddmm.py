@@ -42,8 +42,7 @@ class _Lddmm:
         num_iterations=None,
         num_affine_only_iterations=None,
         # Stepsizes.
-        translational_stepsize=None,
-        linear_stepsize=None,
+        affine_stepsize=None,
         deformative_stepsize=None,
         # Velocity field specifiers.
         sigma_regularization=None,
@@ -83,8 +82,7 @@ class _Lddmm:
         self.num_iterations = int(num_iterations) if num_iterations is not None else 200
         self.num_affine_only_iterations = int(num_affine_only_iterations) if num_affine_only_iterations is not None else 50
         # Stepsizes.
-        self.translational_stepsize = float(translational_stepsize) if translational_stepsize is not None else 0
-        self.linear_stepsize = float(linear_stepsize) if linear_stepsize is not None else 0
+        self.affine_stepsize = float(affine_stepsize) if affine_stepsize is not None else 0
         self.deformative_stepsize = float(deformative_stepsize) if deformative_stepsize is not None else 0
         # Velocity field specifiers.
         self.sigma_regularization = float(sigma_regularization) if sigma_regularization is not None else 10 * np.max(self.template_resolution)
@@ -463,21 +461,17 @@ class _Lddmm:
         # Reshape and broadcast deformed_template_gradient from shape (x,y,z,3) to (x,y,z,3,1) to (x,y,z,3,4) - for a 3D example.
         deformed_template_gradient_broadcast = np.repeat(np.expand_dims(deformed_template_gradient, -1), repeats=self.target.ndim + 1, axis=-1)
 
-        # Concatenate a 4th row of 0's to the 2nd-last dimension of deformed_template_gradient_broadcast - for a 3D example.
-        zeros = np.zeros((*self.target.shape, 1, self.target.ndim + 1))
-        deformed_template_gradient_broadcast = np.concatenate((deformed_template_gradient_broadcast, zeros), -2)
-
         # Construct homogenous_target_coords by appending 1's at the end of the last dimension throughout self.target_coords.
         ones = np.ones((*self.target.shape, 1))
         homogenous_target_coords = np.concatenate((self.target_coords, ones), -1)
         
         # For a 3D example:
 
-        # deformed_template_gradient_broadcast  has shape (x,y,z,4,4).
+        # deformed_template_gradient_broadcast  has shape (x,y,z,3,4).
         # homogenous_target_coords              has shape (x,y,z,4).
 
         # To repeat homogenous_target_coords along the 2nd-last dimension of deformed_template_gradient_broadcast, 
-        # we reshape homogenous_target_coords from shape (x,y,z,4) to shape (x,y,z,1,4) and let that broadcast to shape (x,y,z,4,4).
+        # we reshape homogenous_target_coords from shape (x,y,z,4) to shape (x,y,z,1,4) and let that broadcast to shape (x,y,z,3,4).
 
         matching_affine_inv_gradient = deformed_template_gradient_broadcast * np.expand_dims(homogenous_target_coords, -2)
 
@@ -491,21 +485,27 @@ class _Lddmm:
         affine_inv_gradient = matching_affine_inv_gradient * d_matching_d_deformed_template[...,None,None]
 
         # Note: before implementing Gauss Newton below, affine_inv_gradient_reduction as defined below was the previous returned value for the affine_inv_gradient.
-        # For 3D case, this has shape (4,4).
+        # For 3D case, this has shape (3,4).
         affine_inv_gradient_reduction = np.sum(affine_inv_gradient, tuple(range(self.target.ndim)))
 
-        # Reshape to a single vector. For a 3D case this becomes shape (16,).
+        # Reshape to a single vector. For a 3D case this becomes shape (12,).
         affine_inv_gradient_reduction = affine_inv_gradient_reduction.ravel()
 
-        # For a 3D case, matching_affine_inv_gradient has shape (x,y,z,4,4).
-        # For a 3D case, affine_inv_hessian_approx is matching_affine_inv_gradient reshaped to shape (x,y,z,16,1), 
+        # For a 3D case, matching_affine_inv_gradient has shape (x,y,z,3,4).
+        # For a 3D case, affine_inv_hessian_approx is matching_affine_inv_gradient reshaped to shape (x,y,z,12,1), 
         # then matrix multiplied by itself transposed on the last two dimensions, then summed over the spatial dimensions
-        # to resultant shape (16,16).
+        # to resultant shape (12,12).
         affine_inv_hessian_approx = matching_affine_inv_gradient.reshape(*matching_affine_inv_gradient.shape[:-2], -1, 1)
         affine_inv_hessian_approx = affine_inv_hessian_approx @ affine_inv_hessian_approx.reshape(*affine_inv_hessian_approx.shape[:-2], 1, -1)
         affine_inv_hessian_approx = np.sum(affine_inv_hessian_approx, tuple(range(self.target.ndim)))
 
-        return solve(affine_inv_hessian_approx, affine_inv_gradient_reduction, assume_a='pos')
+        # Solve for affine_inv_gradient.
+        affine_inv_gradient = solve(affine_inv_hessian_approx, affine_inv_gradient_reduction, assume_a='pos').reshape(matching_affine_inv_gradient.shape[-2:])
+        # Append a row of zeros at the end of the 0th dimension.
+        zeros = np.zeros(self.target.ndim + 1)
+        affine_inv_gradient = np.concatenate((affine_inv_gradient, zeros), 0)
+
+        return affine_inv_gradient
 
 
     def _update_affine(self, affine_inv_gradient):
@@ -519,14 +519,9 @@ class _Lddmm:
             affines
         """
         
-
-        linear_and_translational_stepsize_matrix = np.zeros_like(self.affine)
-        linear_and_translational_stepsize_matrix[:-1, :-1] = self.linear_stepsize
-        linear_and_translational_stepsize_matrix[:-1, -1] = self.translational_stepsize
-        
         affine_inv = inv(self.affine)
 
-        affine_inv -= affine_inv_gradient * linear_and_translational_stepsize_matrix
+        affine_inv -= affine_inv_gradient * self.affine_stepsize
 
         self.affine = inv(affine_inv)
 
@@ -700,6 +695,7 @@ r'''
                                                                                             
 '''
 
+#TODO: fix docstring example re affine_stepsize
 def lddmm_register(
     # Images.
     template,
@@ -711,8 +707,7 @@ def lddmm_register(
     num_iterations=None,
     num_affine_only_iterations=None,
     # Stepsizes.
-    translational_stepsize=None,
-    linear_stepsize=None,
+    affine_stepsize=None,
     deformative_stepsize=None,
     # Velocity field specifiers.
     sigma_regularization=None,
@@ -747,8 +742,7 @@ def lddmm_register(
         target_resolution (float, optional): A scalar or list of scalars indicating the resolution of the target. Overrides 0 input. Defaults to 1.
         num_iterations (int, optional): The total number of iterations. Defaults to 200.
         num_affine_only_iterations (int, optional): The number of iterations at the start of the process without deformative adjustments. Defaults to 50.
-        translational_stepsize (float, optional): The stepsize for translational adjustments. Defaults to 0.
-        linear_stepsize (float, optional): The stepsize for linear adjustments. Defaults to 0.
+        affine_stepsize (float, optional): The stepsize for affine adjustments. Defaults to 0.
         deformative_stepsize (float, optional): The stepsize for deformative adjustments. Defaults to 0.
         sigma_regularization (float, optional): A scalar indicating the freedom to deform. Overrides 0 input. Defaults to 10 * np.max(self.template_resolution).
         smooth_length (float, optional): The length scale of smoothing. Overrides 0 input. Defaults to 2 * np.max(self.template_resolution).
@@ -814,8 +808,7 @@ def lddmm_register(
         sigma_matching=sigma_matching,
         sigma_contrast=sigma_contrast,
         sigma_regularization=sigma_regularization,
-        translational_stepsize=translational_stepsize,
-        linear_stepsize=linear_stepsize,
+        affine_stepsize=affine_stepsize,
         deformative_stepsize=deformative_stepsize,
         check_artifacts=check_artifacts,
         spatially_varying_contrast_map=spatially_varying_contrast_map,
