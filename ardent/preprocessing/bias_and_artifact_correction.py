@@ -120,7 +120,10 @@ def remove_grid_artifact(image, z_axis=0, sigma_blur=None, mask='Otsu', otsu_nbi
     sigma_blur = float(sigma_blur) if sigma_blur is not None else np.ceil(np.sqrt(np.min(image.shape)))
 
     # Validate otsu_binary_closing_radius.
-    otsu_binary_closing_radius = float(otsu_binary_closing_radius) if otsu_binary_closing_radius is not None else np.ceil(np.sqrt(np.min(image.shape)) / 3)
+    otsu_binary_closing_radius = int(otsu_binary_closing_radius) if otsu_binary_closing_radius is not None else int(np.ceil(np.sqrt(np.min(image.shape)) / 3))
+
+    # Validate otsu_background_is_dim.
+    otsu_background_is_dim = bool(otsu_background_is_dim)
 
     # Construct masked_image as a ma.MaskedArray.
 
@@ -132,7 +135,7 @@ def remove_grid_artifact(image, z_axis=0, sigma_blur=None, mask='Otsu', otsu_nbi
         # by maximizing the interclass variance and minimizing the intraclass variance between voxel intensities, 
         # with he higher-intensity class labeled as 1.
         otsu_threshold = threshold_otsu(image, nbins=otsu_nbins)
-        mask = np.ones_like(image, bool)
+        mask = np.ones_like(image, int)
         # Segment image by otsu_threshold.
         mask[image <= otsu_threshold if otsu_background_is_dim else image >= otsu_threshold] = 0
         # Perform binary closing and then binary fill hole on image to remove mislabed background voxels inside the foreground regions.
@@ -144,7 +147,7 @@ def remove_grid_artifact(image, z_axis=0, sigma_blur=None, mask='Otsu', otsu_nbi
                     sitk.sitkBall
                 )
             )
-        )
+        ).astype(bool)
     else:
         mask = _validate_ndarray(mask, reshape_to_shape=image.shape, dtype=bool)
     
