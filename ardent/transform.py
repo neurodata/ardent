@@ -206,27 +206,38 @@ class Transform:
 
         # Collect registration parameters.
         registration_parameters = dict(
+            # Images.
             template=template,
             target=target,
+            # Image resolutions.
             template_resolution=template_resolution,
             target_resolution=target_resolution,
-            translational_stepsize=translational_stepsize,
-            linear_stepsize=linear_stepsize,
-            deformative_stepsize=deformative_stepsize,
-            sigma_regularization=sigma_regularization,
+            # Iterations.
             num_iterations=num_iterations,
             num_affine_only_iterations=num_affine_only_iterations,
+            # Stepsizes.
+            affine_stepsize=affine_stepsize,
+            deformative_stepsize=deformative_stepsize,
+            # Velocity field specifiers.
+            sigma_regularization=sigma_regularization,
+            smooth_length=smooth_length,
+            num_timesteps=num_timesteps,
+            # Contrast map specifiers.
+            contrast_order=contrast_order,
+            spatially_varying_contrast_map=spatially_varying_contrast_map,
+            contrast_maxiter=contrast_maxiter,
+            contrast_tolerance=contrast_tolerance,
+            sigma_contrast=sigma_contrast,
+            # Artifact specifiers.
+            check_artifacts=check_artifacts,
+            sigma_artifact=sigma_artifact,
+            # # vs. accuracy tradeoff.
+            sigma_matching=sigma_matching,
+            # Initial values.
             initial_affine=initial_affine,
             initial_velocity_fields=initial_velocity_fields,
             initial_contrast_coefficients=initial_contrast_coefficients,
-            num_timesteps=num_timesteps,
-            smooth_length=smooth_length,
-            contrast_order=contrast_order,
-            contrast_tolerance=contrast_tolerance,
-            contrast_maxiter=contrast_maxiter,
-            sigma_contrast=sigma_contrast,
-            sigma_matching=sigma_matching,
-            spatially_varying_contrast_map=spatially_varying_contrast_map,
+            # Diagnostic outputs.
             calibrate=calibrate,
             track_progress_every_n=track_progress_every_n,
         )
