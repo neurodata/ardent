@@ -125,69 +125,74 @@ class Transform:
 
     def register(
         self,
+        # Images.
         template,
         target,
-        template_resolution=1,
-        target_resolution=1,
-        preset=None,
-        # Registration parameters.
-        translational_stepsize=0,
-        linear_stepsize=0,
-        deformative_stepsize=0,
-        sigma_regularization=0,
-        num_iterations=200,
-        num_affine_only_iterations=50,
+        # Image resolutions.
+        template_resolution=None,
+        target_resolution=None,
+        # Iterations.
+        num_iterations=None,
+        num_affine_only_iterations=None,
+        # Stepsizes.
+        affine_stepsize=None,
+        deformative_stepsize=None,
+        # Velocity field specifiers.
+        sigma_regularization=None,
+        smooth_length=None,
+        num_timesteps=None,
+        # Contrast map specifiers.
+        contrast_order=None,
+        spatially_varying_contrast_map=None,
+        contrast_maxiter=None,
+        contrast_tolerance=None,
+        sigma_contrast=None,
+        # Artifact specifiers.
+        check_artifacts=None,
+        sigma_artifact=None,
+        # Smoothness vs. accuracy tradeoff.
+        sigma_matching=None,
+        # Initial values.
         initial_affine=None,
         initial_velocity_fields=None,
         initial_contrast_coefficients=None,
-        num_timesteps=5,
-        smooth_length=None,
-        contrast_order=1,
-        contrast_tolerance=1e-5,
-        contrast_maxiter=100,
-        sigma_contrast=1e-2,
-        sigma_matching=None,
-        spatially_varying_contrast_map=False,
-        calibrate=False,
-        track_progress_every_n=0,
+        # Diagnostic outputs.
+        calibrate=None,
+        track_progress_every_n=None,
     ):
         """
-        Compute a registration between template and target, to be applied with apply_lddmm.
+        Compute a registration between template and target, to be applied with apply_transform.
         
         Args:
-            template (np.ndarray): The ideally clean template image being registered to the target.
-            target (np.ndarray): The potentially messier target image being registered to.
-            template_resolution (float, list, optional): A scalar or list of scalars indicating the resolution of the template. Defaults to 1.
-            target_resolution (float, optional): A scalar or list of scalars indicating the resolution of the target. Defaults to 1.
-            preset (string, Nontranslational_stepsizeype, optional): Preset of registration parameters. Overrides some subset of the registration parameters with preset values if provided.
-                Supported options:
-                    'identity'
-                    'clarity, mouse'
-                    'nissl, mouse'
-                    'mri, human'
-                Defaults to: None.
-            translational_stepsize (float, optional): The stepsize for translational adjustments. Defaults to 0.
-            linear_stepsize (float, optional): The stepsize for linear adjustments. Defaults to 0.
-            deformative_stepsize (float, optional): The stepsize for deformative adjustments. Defaults to 0.
-            sigma_regularization (float, optional): A scalar indicating the freedom to deform. Defaults to 0.
-            num_iterations (int, optional): The total number of iterations. Defaults to 200.
-            num_affine_only_iterations (int, optional): The number of iterations at the start of the process without deformative adjustments. Defaults to 50.
-            initial_affine (np.ndarray, optional): The affine array that the registration will begin with. Defaults to np.eye(template.ndim + 1).
-            initial_velocity_fields (np.ndarray, optional): The velocity fields that the registration will begin with. Defaults to None.
-            initial_contrast_coefficients (np.ndarray, optional): The contrast coefficients that the registration will begin with. 
-                If None, the 0th order coefficient(s) are set to np.mean(self.target) - np.mean(self.template) * np.std(self.target) / np.std(self.template), 
-                if self.contrast_order > 1, the 1st order coefficient(s) are set to np.std(self.target) / np.std(self.template), 
-                and all others are set to zero. Defaults to None.
-            num_timesteps (int, optional): The number of composed sub-transformations in the diffeomorphism. Defaults to 5.
-            smooth_length (float, optional): The length scale of smoothing. Defaults to None.
-            contrast_order (int, optional): The order of the polynomial fit between the contrasts of the template and target. Defaults to 3.
-            contrast_tolerance (float, optional): The tolerance for convergence to the optimal contrast_coefficients if spatially_varying_contrast_map == True. Defaults to 1e-5.
-            contrast_maxiter (int, optional): The maximum number of iterations to converge toward the optimal contrast_coefficients if spatially_varying_contrast_map == True. Defaults to 100.
-            sigma_contrast (float, optional): The scale of variation in the contrast_coefficients if spatially_varying_contrast_map == True. Defaults to 1e-2.
-            sigma_matching (float, optional): A measure of spread. Defaults to None.
-            spatially_varying_contrast_map (bool, optional): If True, uses a polynomial per voxel to compute the contrast map rather than a single polynomial. Defaults to False.
-            calibrate (bool, optional): A boolean flag indicating whether to accumulate additional intermediate values and display informative plots for calibration purposes. Defaults to False.
-            track_progress_every_n (int, optional): If positive, a progress update will be printed every track_progress_every_n iterations of registration. Defaults to 0.
+        template (np.ndarray): The ideally clean template image being registered to the target.
+        target (np.ndarray): The potentially messier target image being registered to.
+        template_resolution (float, list, optional): A scalar or list of scalars indicating the resolution of the template. Overrides 0 input. Defaults to 1.
+        target_resolution (float, optional): A scalar or list of scalars indicating the resolution of the target. Overrides 0 input. Defaults to 1.
+        num_iterations (int, optional): The total number of iterations. Defaults to 200.
+        num_affine_only_iterations (int, optional): The number of iterations at the start of the process without deformative adjustments. Defaults to 50.
+        affine_stepsize (float, optional): The stepsize for affine adjustments. Should be between 0 and 1. Defaults to 0.2.
+        deformative_stepsize (float, optional): The stepsize for deformative adjustments. Defaults to 0.
+        sigma_regularization (float, optional): A scalar indicating the freedom to deform. Overrides 0 input. Defaults to 10 * np.max(self.template_resolution).
+        smooth_length (float, optional): The length scale of smoothing. Overrides 0 input. Defaults to 2 * np.max(self.template_resolution).
+        num_timesteps (int, optional): The number of composed sub-transformations in the diffeomorphism. Overrides 0 input. Defaults to 5.
+        contrast_order (int, optional): The order of the polynomial fit between the contrasts of the template and target. Overrides 0 input. Defaults to 1.
+        spatially_varying_contrast_map (bool, optional): If True, uses a polynomial per voxel to compute the contrast map rather than a single polynomial. Defaults to False.
+        contrast_maxiter (int, optional): The maximum number of iterations to converge toward the optimal contrast_coefficients if spatially_varying_contrast_map == True. Overrides 0 input. Defaults to 100.
+        contrast_tolerance (float, optional): The tolerance for convergence to the optimal contrast_coefficients if spatially_varying_contrast_map == True. Defaults to 1e-5.
+        sigma_contrast (float, optional): The scale of variation in the contrast_coefficients if spatially_varying_contrast_map == True. Overrides 0 input. Defaults to 1e-2.
+        check_artifacts (bool, optional): If True, artifacts are jointly classified with registration using sigma_artifact. Defaults to False.
+        sigma_artifact (float, optional): The level of expected variation between artifact and non-artifact intensities. Overrides 0 input. Defaults to 5 * sigma_matching.
+        sigma_matching (float, optional): An estimate of the spread of the noise in the target, 
+            representing the tradeoff between the regularity and accuracy of the registration, where a smaller value should result in a less smooth, more accurate result. 
+            Typically it should be set to an estimate of the standard deviation of the noise in the image, particularly with artifacts. Overrides 0 input. Defaults to the standard deviation of the target.
+        initial_affine (np.ndarray, optional): The affine array that the registration will begin with. Defaults to np.eye(template.ndim + 1).
+        initial_velocity_fields (np.ndarray, optional): The velocity fields that the registration will begin with. Defaults to all zeros.
+        initial_contrast_coefficients (np.ndarray, optional): The contrast coefficients that the registration will begin with. 
+            If None, the 0th order coefficient(s) are set to np.mean(self.target) - np.mean(self.template) * np.std(self.target) / np.std(self.template), 
+            if self.contrast_order > 1, the 1st order coefficient(s) are set to np.std(self.target) / np.std(self.template), 
+            and all others are set to zero. Defaults to None.
+        calibrate (bool, optional): A boolean flag indicating whether to accumulate additional intermediate values and display informative plots for calibration purposes. Defaults to False.
+        track_progress_every_n (int, optional): If positive, a progress update will be printed every track_progress_every_n iterations of registration. Defaults to 0.
         """
 
         # Collect registration parameters.
