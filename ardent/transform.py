@@ -131,6 +131,8 @@ class Transform:
         # Image resolutions.
         template_resolution=None,
         target_resolution=None,
+        # Preset.
+        preset=None,
         # Iterations.
         num_iterations=None,
         num_affine_only_iterations=None,
@@ -168,6 +170,13 @@ class Transform:
         target (np.ndarray): The potentially messier target image being registered to.
         template_resolution (float, list, optional): A scalar or list of scalars indicating the resolution of the template. Overrides 0 input. Defaults to 1.
         target_resolution (float, optional): A scalar or list of scalars indicating the resolution of the target. Overrides 0 input. Defaults to 1.
+        preset (string, Nontranslational_stepsizeype, optional): Preset of registration parameters. Overrides some subset of the registration parameters with preset values if provided.
+            Supported options:
+                'identity'
+                'clarity, mouse'
+                'nissl, mouse'
+                'mri, human'
+            Defaults to: None.
         num_iterations (int, optional): The total number of iterations. Defaults to 200.
         num_affine_only_iterations (int, optional): The number of iterations at the start of the process without deformative adjustments. Defaults to 50.
         affine_stepsize (float, optional): The stepsize for affine adjustments. Should be between 0 and 1. Defaults to 0.2.
