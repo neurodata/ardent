@@ -502,7 +502,7 @@ class _Lddmm:
         # Solve for affine_inv_gradient.
         affine_inv_gradient = solve(affine_inv_hessian_approx, affine_inv_gradient_reduction, assume_a='pos').reshape(matching_affine_inv_gradient.shape[-2:])
         # Append a row of zeros at the end of the 0th dimension.
-        zeros = np.zeros(1, (self.target.ndim + 1))
+        zeros = np.zeros((1, self.target.ndim + 1))
         affine_inv_gradient = np.concatenate((affine_inv_gradient, zeros), 0)
 
         return affine_inv_gradient
