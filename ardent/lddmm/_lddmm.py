@@ -82,7 +82,7 @@ class _Lddmm:
         self.num_iterations = int(num_iterations) if num_iterations is not None else 200
         self.num_affine_only_iterations = int(num_affine_only_iterations) if num_affine_only_iterations is not None else 50
         # Stepsizes.
-        self.affine_stepsize = float(affine_stepsize) if affine_stepsize is not None else 0
+        self.affine_stepsize = float(affine_stepsize) if affine_stepsize is not None else 0.2
         self.deformative_stepsize = float(deformative_stepsize) if deformative_stepsize is not None else 0
         # Velocity field specifiers.
         self.sigma_regularization = float(sigma_regularization) if sigma_regularization is not None else 10 * np.max(self.template_resolution)
@@ -742,7 +742,7 @@ def lddmm_register(
         target_resolution (float, optional): A scalar or list of scalars indicating the resolution of the target. Overrides 0 input. Defaults to 1.
         num_iterations (int, optional): The total number of iterations. Defaults to 200.
         num_affine_only_iterations (int, optional): The number of iterations at the start of the process without deformative adjustments. Defaults to 50.
-        affine_stepsize (float, optional): The stepsize for affine adjustments. Defaults to 0.
+        affine_stepsize (float, optional): The stepsize for affine adjustments. Should be between 0 and 1. Defaults to 0.2.
         deformative_stepsize (float, optional): The stepsize for deformative adjustments. Defaults to 0.
         sigma_regularization (float, optional): A scalar indicating the freedom to deform. Overrides 0 input. Defaults to 10 * np.max(self.template_resolution).
         smooth_length (float, optional): The length scale of smoothing. Overrides 0 input. Defaults to 2 * np.max(self.template_resolution).
