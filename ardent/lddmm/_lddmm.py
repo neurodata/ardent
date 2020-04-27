@@ -1,7 +1,7 @@
 import warnings
 import numpy as np
 from scipy.interpolate import interpn
-from scipy.linalg import inv, solve, det
+from scipy.linalg import inv, solve, det, svd
 from scipy.sparse.linalg import cg, LinearOperator
 from matplotlib import pyplot as plt
 
@@ -13,6 +13,8 @@ from ._lddmm_utilities import _compute_coords
 from ._lddmm_utilities import _multiply_coords_by_affine
 from ._lddmm_utilities import _compute_tail_determinant
 from ._lddmm_utilities import resample
+
+# TODO: add multiscale functionality.
 
 r'''
   _            _       _                         
@@ -41,6 +43,7 @@ class _Lddmm:
         # Iterations.
         num_iterations=None,
         num_affine_only_iterations=None,
+        num_rigid_affine_iterations=None,
         # Stepsizes.
         affine_stepsize=None,
         deformative_stepsize=None,
@@ -79,10 +82,11 @@ class _Lddmm:
         self.target_resolution = _validate_scalar_to_multi(target_resolution if target_resolution is not None else 1, self.target.ndim)
 
         # Iterations.
-        self.num_iterations = int(num_iterations) if num_iterations is not None else 200
-        self.num_affine_only_iterations = int(num_affine_only_iterations) if num_affine_only_iterations is not None else 50
+        self.num_iterations = int(num_iterations) if num_iterations is not None else 300
+        self.num_affine_only_iterations = int(num_affine_only_iterations) if num_affine_only_iterations is not None else 100
+        self.num_rigid_affine_iterations = int(num_rigid_affine_iterations) if num_rigid_affine_iterations is not None else 50
         # Stepsizes.
-        self.affine_stepsize = float(affine_stepsize) if affine_stepsize is not None else 0.2
+        self.affine_stepsize = float(affine_stepsize) if affine_stepsize is not None else 0.3
         self.deformative_stepsize = float(deformative_stepsize) if deformative_stepsize is not None else 0
         # Velocity field specifiers.
         self.sigma_regularization = float(sigma_regularization) if sigma_regularization is not None else 10 * np.max(self.template_resolution)
@@ -150,11 +154,11 @@ class _Lddmm:
             else:
                 self.contrast_coefficients = _validate_ndarray(initial_contrast_coefficients, reshape_to_shape=(self.contrast_order + 1))
         self.contrast_coefficients[..., 0] = np.mean(self.target) - np.mean(self.template) * np.std(self.target) / np.std(self.template)
-        if self.contrast_order > 1: self.contrast_coefficients[..., 1] = np.std(self.target) / np.std(self.template)
+        if self.contrast_order > 0: self.contrast_coefficients[..., 1] = np.std(self.target) / np.std(self.template)
         self.contrast_polynomial_basis = np.empty((*self.target.shape, self.contrast_order + 1))
         for power in range(self.contrast_order + 1):
             self.contrast_polynomial_basis[..., power] = self.deformed_template**power
-        self.contrast_deformed_template = None
+        self.contrast_deformed_template = np.sum(self.contrast_polynomial_basis * self.contrast_coefficients, axis=-1) # Initialized value not used.
         fourier_template_coords = _compute_coords(self.template.shape, 1 / (self.template_resolution * self.template.shape), origin='zero')
         self.low_pass_filter = 1 / (
             (1 - self.smooth_length**2 * (
@@ -172,6 +176,10 @@ class _Lddmm:
             self.affines = []
             self.maximum_velocities = [0] * self.num_affine_only_iterations
 
+        # Preempt known error.
+        if np.any(np.array(self.template.shape) == 1) or np.any(np.array(self.target.shape) == 1):
+            raise RuntimeError(f"Known issue: Images with a 1 in their shape are not supported by scipy.interpolate.interpn.\n"
+                               f"self.template.shape: {self.template.shape}, self.target.shape: {self.target.shape}.\n")
 
     def register(self):
         """
@@ -186,7 +194,11 @@ class _Lddmm:
         for iteration in range(self.num_iterations):
             # If self.track_progress_every_n > 0, print progress updates every 10 iterations.
             if self.track_progress_every_n > 0 and not iteration % self.track_progress_every_n:
-                print(f"Progress: iteration {iteration}/{self.num_iterations}{' affine only' if iteration < self.num_affine_only_iterations else ''}.")
+                print(
+                    f"Progress: iteration {iteration}/{self.num_iterations}"
+                    f"{' rigid' if iteration < self.num_rigid_affine_iterations else ''}"
+                    f"{' affine only' if iteration < self.num_affine_only_iterations else ' affine and deformative'}."
+                )
 
             # Forward pass: apply transforms to the template and compute the costs.
 
@@ -210,10 +222,10 @@ class _Lddmm:
             # Compute velocity_fields gradient.
             if iteration >= self.num_affine_only_iterations: velocity_fields_gradients = self._compute_velocity_fields_gradients()
             # Update affine.
-            self._update_affine(affine_inv_gradient)
+            self._update_affine(affine_inv_gradient, iteration)
             # Update velocity_fields.
             if iteration >= self.num_affine_only_iterations: self._update_velocity_fields(velocity_fields_gradients)
-        
+
         # Compute affine_phi in case there were only affine-only iterations.
         self._compute_affine_phi()
 
@@ -495,12 +507,22 @@ class _Lddmm:
         # For a 3D case, affine_inv_hessian_approx is matching_affine_inv_gradient reshaped to shape (x,y,z,12,1), 
         # then matrix multiplied by itself transposed on the last two dimensions, then summed over the spatial dimensions
         # to resultant shape (12,12).
-        affine_inv_hessian_approx = matching_affine_inv_gradient.reshape(*matching_affine_inv_gradient.shape[:-2], -1, 1)
+        affine_inv_hessian_approx = matching_affine_inv_gradient * ((contrast_map_prime * np.sqrt(self.matching_weights) / self.sigma_matching)[...,None,None])
+        affine_inv_hessian_approx = affine_inv_hessian_approx.reshape(*matching_affine_inv_gradient.shape[:-2], -1, 1)
         affine_inv_hessian_approx = affine_inv_hessian_approx @ affine_inv_hessian_approx.reshape(*affine_inv_hessian_approx.shape[:-2], 1, -1)
         affine_inv_hessian_approx = np.sum(affine_inv_hessian_approx, tuple(range(self.target.ndim)))
 
         # Solve for affine_inv_gradient.
-        affine_inv_gradient = solve(affine_inv_hessian_approx, affine_inv_gradient_reduction, assume_a='pos').reshape(matching_affine_inv_gradient.shape[-2:])
+        try:
+            affine_inv_gradient = solve(affine_inv_hessian_approx, affine_inv_gradient_reduction, assume_a='pos').reshape(matching_affine_inv_gradient.shape[-2:])
+        except np.linalg.LinAlgError as exception:
+            exception.args = (
+                *exception.args, f"The Hessian was not invertible in the Gauss-Newton update of the affine transform. "
+                                 f"This may be because the image was constant along one or more dimensions. "
+                                 f"Consider removing any constant dimensions. "
+                                 f"Otherwise you may try using a smaller value for affine_stepsize."
+            )
+            raise exception
         # Append a row of zeros at the end of the 0th dimension.
         zeros = np.zeros((1, self.target.ndim + 1))
         affine_inv_gradient = np.concatenate((affine_inv_gradient, zeros), 0)
@@ -508,9 +530,11 @@ class _Lddmm:
         return affine_inv_gradient
 
 
-    def _update_affine(self, affine_inv_gradient):
+    def _update_affine(self, affine_inv_gradient, iteration):
         """
-        Update self.affine_inv and self.affine based on affine_inv_gradient.
+        Update self.affine based on affine_inv_gradient.
+
+        If iteration < self.num_rigid_affine_iterations, project self.affine to a rigid affine.
 
         if self.calibrate, appends the current self.affine to self.affines.
 
@@ -524,6 +548,11 @@ class _Lddmm:
         affine_inv -= affine_inv_gradient * self.affine_stepsize
 
         self.affine = inv(affine_inv)
+
+        # Project self.affine to a rigid affine
+        if iteration < self.num_rigid_affine_iterations:
+            U, _, Vh = svd(self.affine[:-1, :-1])
+            self.affine[:-1, :-1] = U @ Vh
 
         # Save affine for calibration plotting.
         if self.calibrate:
@@ -706,6 +735,7 @@ def lddmm_register(
     # Iterations.
     num_iterations=None,
     num_affine_only_iterations=None,
+    num_rigid_affine_iterations=None,
     # Stepsizes.
     affine_stepsize=None,
     deformative_stepsize=None,
@@ -740,10 +770,11 @@ def lddmm_register(
         target (np.ndarray): The potentially messier target image being registered to.
         template_resolution (float, list, optional): A scalar or list of scalars indicating the resolution of the template. Overrides 0 input. Defaults to 1.
         target_resolution (float, optional): A scalar or list of scalars indicating the resolution of the target. Overrides 0 input. Defaults to 1.
-        num_iterations (int, optional): The total number of iterations. Defaults to 200.
-        num_affine_only_iterations (int, optional): The number of iterations at the start of the process without deformative adjustments. Defaults to 50.
-        affine_stepsize (float, optional): The stepsize for affine adjustments. Should be between 0 and 1. Defaults to 0.2.
-        deformative_stepsize (float, optional): The stepsize for deformative adjustments. Defaults to 0.
+        num_iterations (int, optional): The total number of iterations. Defaults to 300.
+        num_affine_only_iterations (int, optional): The number of iterations at the start of the process without deformative adjustments. Defaults to 100.
+        num_rigid_affine_iterations (int, optional): The number of iterations at the start of the process in which the affine is kept rigid. Defaults to 50.
+        affine_stepsize (float, optional): The unitless stepsize for affine adjustments. Should be between 0 and 1. Defaults to 0.3.
+        deformative_stepsize (float, optional): The stepsize for deformative adjustments. Optimal values are problem-specific. If equal to 0 then the result is affine-only registration. Defaults to 0.
         sigma_regularization (float, optional): A scalar indicating the freedom to deform. Overrides 0 input. Defaults to 10 * np.max(self.template_resolution).
         smooth_length (float, optional): The length scale of smoothing. Overrides 0 input. Defaults to 2 * np.max(self.template_resolution).
         num_timesteps (int, optional): The number of composed sub-transformations in the diffeomorphism. Overrides 0 input. Defaults to 5.
@@ -772,15 +803,15 @@ def lddmm_register(
         >>> from skimage.registration import lddmm_register, apply_lddmm
         >>> # 
         >>> # Define images. The template is registered to the target image but both transformations are returned.
-        >>> # template is a binary elliptic cylinder with semi-radii 6 and 8 in dimensions 1 and 2. The overall shape is (2, 21, 29).
+        >>> # template is a binary ellipse with semi-radii 5 and 8 in dimensions 0 and 1. The overall shape is (19, 25).
         >>> # target is a 30 degree rotation of template in the (1,2) plane.
         >>> # 
-        >>> template = np.array([[[(col-12)**2 + (row-12)**2 <= 8**2 for col in range(25)] for row in range(25)]]*2, int)
+        >>> template = np.array([[[(col-12)**2/8**2 + (row-9)**2/5**2 <= 1 for col in range(25)] for row in range(19)]]*2, int)
         >>> target = rotate(template, 30, (1,2))
         >>> # 
         >>> # Register the template to the target, then deform the template and target to match the other.
         >>> # 
-        >>> lddmm_dict = lddmm_register(template, target, translational_stepsize = 0.00001, linear_stepsize = 0.00001, deformative_stepsize = 0.5)
+        >>> lddmm_dict = lddmm_register(template, target, deformative_stepsize = 0.5)
         >>> deformed_target   = apply_lddmm(target,   deform_to='template', **lddmm_dict)
         >>> deformed_template = apply_lddmm(template, deform_to='target',   **lddmm_dict)
 
@@ -801,6 +832,7 @@ def lddmm_register(
         # Iterations.
         num_iterations=num_iterations,
         num_affine_only_iterations=num_affine_only_iterations,
+        num_rigid_affine_iterations=num_rigid_affine_iterations,
         # Stepsizes.
         affine_stepsize=affine_stepsize,
         deformative_stepsize=deformative_stepsize,
@@ -855,7 +887,7 @@ def _generate_position_field(
     # Validate velocity_field_resolution.
     velocity_field_resolution = _validate_resolution(velocity_fields.ndim - 2, velocity_field_resolution)
     # Validate affine.
-    affine = _validate_ndarray(affine, required_ndim=2, reshape_to_shape=(len(template_shape), len(template_shape)))
+    affine = _validate_ndarray(affine, required_ndim=2, reshape_to_shape=(len(template_shape) + 1, len(template_shape) + 1))
     # Verify deform_to.
     if not isinstance(deform_to, str):
         raise TypeError(f"deform_to must be of type str.\n"
@@ -942,17 +974,19 @@ def _apply_position_field(
     # Validate subject_resolution.
     subject_resolution = _validate_resolution(subject.ndim, subject_resolution)
     # Validate output_resolution.
-    output_resolution = _validate_resolution(subject.ndim, output_resolution)
+    if output_resolution is not None:
+        output_resolution = _validate_resolution(subject.ndim, output_resolution)
 
-    # Resample position_field.
-    position_field = resample(
-        image=position_field, 
-        new_resolution=output_resolution, 
-        old_resolution=position_field_resolution, 
-        err_to_larger=True, 
-        extrapolation_fill_value=None, 
-        image_is_coords=True, 
-    )
+    # Resample position_field if necessary.
+    if output_resolution is not None:
+        position_field = resample(
+            image=position_field, 
+            new_resolution=output_resolution, 
+            old_resolution=position_field_resolution, 
+            err_to_larger=True, 
+            extrapolation_fill_value=None, 
+            image_is_coords=True, 
+        )
 
     # Interpolate subject at position field.
     deformed_subject = interpn(
@@ -1026,11 +1060,7 @@ def apply_lddmm(
     elif deform_to not in ["template", "target"]:
         raise ValueError(f"deform_to must be either 'template' or 'target'.")
     # Validate output_resolution.
-    if output_resolution is None and deform_to == "template" or output_resolution == "template":
-        output_resolution = np.copy(template_resolution)
-    elif output_resolution is None and deform_to == "target" or output_resolution == "target":
-        output_resolution = np.copy(target_resolution)
-    else:
+    if output_resolution is not None:
         output_resolution = _validate_resolution(subject.ndim, output_resolution)
     # Validate extrapolation_fill_value.
     if extrapolation_fill_value is None:
