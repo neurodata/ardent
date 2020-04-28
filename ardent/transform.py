@@ -48,50 +48,22 @@ class Transform:
         # Debuggers.
         self.lddmm=None,
         
-    def _update_lddmm_attributes(
-        self,
-        # Core.
-        affine,
-        phi,
-        phi_inv,
-        affine_phi,
-        phi_inv_affine_inv,
-        contrast_coefficients,
-        velocity_fields,
-        # Helpers.
-        template_resolution,
-        target_resolution,
-        # Accumulators.
-        matching_energies,
-        regularization_energies,
-        total_energies,
-        # Debuggers.
-        lddmm,
-    ):
+
+    def _update_lddmm_attributes(self, lddmm_dict):
         """Update attributes with the output dictionary from lddmm_register."""
+
+        # Verify lddmm_dict.
+        if not isinstance(lddmm_dict, dict):
+            raise TypeError(f"lddmm_dict must be of type dict.\n"
+                            f"type(lddmm_dict): {type(lddmm_dict)}.")
 
         # Set attributes.
 
-        # Core.
-        self.affine=affine
-        self.phi=phi
-        self.phi_inv=phi_inv
-        self.affine_phi=affine_phi
-        self.phi_inv_affine_inv=phi_inv_affine_inv
-        self.contrast_coefficients=contrast_coefficients
-        self.velocity_fields=velocity_fields
-
-        # Helpers.
-        self.template_resolution=template_resolution
-        self.target_resolution=target_resolution
-
-        # Accumulators.
-        self.matching_energies=matching_energies
-        self.regularization_energies=matching_energies
-        self.total_energies=total_energies
-
-        # Debuggers.
-        self.lddmm=lddmm
+        for key, value in lddmm_dict.items():
+            if not hasattr(self, key):
+                raise ValueError(f"lddmm_dict must only have keys that are attributes of self.\n"
+                                 f"key: {key}.")
+            setattr(self, key, value)
 
 
     def get_lddmm_dict(self):
@@ -171,6 +143,7 @@ class Transform:
             target (np.ndarray): The potentially messier target image being registered to.
             template_resolution (float, list, optional): A scalar or list of scalars indicating the resolution of the template. Overrides 0 input. Defaults to 1.
             target_resolution (float, optional): A scalar or list of scalars indicating the resolution of the target. Overrides 0 input. Defaults to 1.
+            preset (str, optional): A string specifying a recognized preset, or subset of the following arguments to provide automatically, overridden by values specified in this call. Defaults to None.
             num_iterations (int, optional): The total number of iterations. Defaults to 300.
             num_affine_only_iterations (int, optional): The number of iterations at the start of the process without deformative adjustments. Defaults to 100.
             num_rigid_affine_iterations (int, optional): The number of iterations at the start of the process in which the affine is kept rigid. Defaults to 50.
@@ -240,7 +213,11 @@ class Transform:
 
         # Fill unspecified parameters with presets if applicable.
         if preset is not None:
-            registration_parameters.update(get_registration_preset(preset))
+            preset_registration_parameters = get_registration_preset(preset)
+            for registration_parameter in registration_parameters.keys():
+                # Override a registration_parameter with a preset value only if that parameter was not specified in this call.
+                if registration_parameter in preset_registration_parameters and registration_parameters[registration_parameter] is None:
+                    registration_parameters[registration_parameter] = preset_registration_parameters[registration_parameter]
 
         # Perform registration.
         lddmm_dict = lddmm_register(**registration_parameters)
@@ -254,7 +231,7 @@ class Transform:
         self._registration_parameters = registration_parameters
 
         # Update attributes.
-        self._update_lddmm_attributes(**lddmm_dict)
+        self._update_lddmm_attributes(lddmm_dict)
 
     
     def continue_registration(self, **registration_parameter_updates):
