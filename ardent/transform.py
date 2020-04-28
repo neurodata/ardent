@@ -214,9 +214,9 @@ class Transform:
         # Fill unspecified parameters with presets if applicable.
         if preset is not None:
             preset_registration_parameters = get_registration_preset(preset)
-            for registration_parameter in registration_parameters.keys():
-                # Override a registration_parameter with a preset value only if that parameter was not specified in this call.
-                if registration_parameter in preset_registration_parameters and registration_parameters[registration_parameter] is None:
+            for registration_parameter in preset_registration_parameters.keys():
+                # Override a registration_parameter with a preset value only if that parameter was not specified in this call (i.e. is None).
+                if registration_parameters[registration_parameter] is None:
                     registration_parameters[registration_parameter] = preset_registration_parameters[registration_parameter]
 
         # Perform registration.
