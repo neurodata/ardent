@@ -112,6 +112,8 @@ class Transform:
         # Stepsizes.
         affine_stepsize=None,
         deformative_stepsize=None,
+        # Affine specifiers.
+        fixed_affine_scale=None,
         # Velocity field specifiers.
         sigma_regularization=None,
         smooth_length=None,
@@ -149,6 +151,7 @@ class Transform:
             num_rigid_affine_iterations (int, optional): The number of iterations at the start of the process in which the affine is kept rigid. Defaults to 50.
             affine_stepsize (float, optional): The unitless stepsize for affine adjustments. Should be between 0 and 1. Defaults to 0.3.
             deformative_stepsize (float, optional): The stepsize for deformative adjustments. Optimal values are problem-specific. If equal to 0 then the result is affine-only registration. Defaults to 0.
+            fixed_affine_scale (float, seq, optional): The per-dimension scale to impose on the affine at every iteration. If None, no scale is imposed. Defaults to None.
             sigma_regularization (float, optional): A scalar indicating the freedom to deform. Overrides 0 input. Defaults to 10 * np.max(self.template_resolution).
             smooth_length (float, optional): The length scale of smoothing. Overrides 0 input. Defaults to 2 * np.max(self.template_resolution).
             num_timesteps (int, optional): The number of composed sub-transformations in the diffeomorphism. Overrides 0 input. Defaults to 5.
@@ -187,6 +190,8 @@ class Transform:
             # Stepsizes.
             affine_stepsize=affine_stepsize,
             deformative_stepsize=deformative_stepsize,
+            # Affine specifiers.
+            fixed_affine_scale=fixed_affine_scale,
             # Velocity field specifiers.
             sigma_regularization=sigma_regularization,
             smooth_length=smooth_length,
