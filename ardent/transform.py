@@ -5,7 +5,7 @@ from pathlib import Path
 import pickle
 
 from .presets import get_registration_preset
-from .lddmm._lddmm import lddmm_register, lddmm_transform_image
+from .lddmm._lddmm import lddmm_register, lddmm_transform_image, lddmm_transform_points
 from . import file_io
 
 
@@ -263,7 +263,7 @@ class Transform:
         self.register(**self._registration_parameters)
 
 
-    def apply_transform(self, subject, subject_resolution=1, output_resolution=None, deform_to="template", extrapolation_fill_value=None, save_path=None):
+    def transform_image(self, subject, subject_resolution=1, output_resolution=None, deform_to="template", extrapolation_fill_value=None, save_path=None):
         """
         Apply the transformation--computed by the last call to self.register--to subject, 
         deforming it into the space of deform_to.
@@ -275,14 +275,14 @@ class Transform:
             output_resolution (NoneType, float, seq, optional): The resolution of the output deformed_subject in each dimension, 
                 or just one scalar to indicate isotropy, or None to indicate the resolution of template or target based on deform_to. Defaults to None.
             extrapolation_fill_value (float, NoneType, optional): The fill_value kwarg passed to scipy.interpolate.interpn; it should be background intensity. 
-            If None, this is set to a low quantile of the subject's 10**-subject.ndim quantile to estimate background. Defaults to None.
+                If None, this is set to a low quantile of the subject's 10**-subject.ndim quantile to estimate background. Defaults to None.
             save_path (str, Path, optional): The full path to save the output to. Defaults to: None.
         
         Returns:
             np.ndarray: The result of deforming subject to match deform_to.
         """
 
-        deformed_subject = lddmm_transform_image(
+        transformed_subject = lddmm_transform_image(
             subject=subject,
             subject_resolution=subject_resolution,
             output_resolution=output_resolution,
@@ -292,9 +292,38 @@ class Transform:
         )
         
         if save_path is not None:
-            file_io.save(deformed_subject, save_path)
+            file_io.save(transformed_subject, save_path)
 
-        return deformed_subject
+        return transformed_subject
+
+
+    def transform_points(self, points, deform_to="template", save_path=None):
+        """
+        Apply the transformation--computed by the last call to self.register--to points, 
+        deforming them into the space of deform_to.
+        
+        Args:
+            points (np.ndarray): The points to deform. The last dimension should contain the coordinates for each point.
+            deform_to (str, optional): Either 'template' or 'target' indicating which to deform points to match. Defaults to: "template".
+            save_path (str, Path, optional): The full path to save the output to. Defaults to: None.
+        
+        Returns:
+            np.ndarray: The result of deforming points to match deform_to, in the same shape as points was given.
+        """
+
+        transformed_points = lddmm_transform_points(
+            points=points,
+            deform_to=deform_to,
+            affine_phi=self.affine_phi,
+            phi_inv_affine_inv=self.phi_inv_affine_inv,
+            template_resolution=self.template_resolution,
+            target_resolution=self.target_resolution,
+        )
+        
+        if save_path is not None:
+            file_io.save(transformed_points, save_path)
+
+        return transformed_points
 
     
     def save(self, file_path):
