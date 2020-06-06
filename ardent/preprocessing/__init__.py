@@ -6,6 +6,9 @@ from .normalization import pad
 from .bias_and_artifact_correction import correct_bias_field
 from .bias_and_artifact_correction import remove_grid_artifact
 
+from .initialization import locally_rotate_velocity_fields
+from .initialization import locally_translate_velocity_fields
+
 
 # TODO: update preprocessing_functions, include resample.
 preprocessing_functions = [
@@ -17,6 +20,9 @@ preprocessing_functions = [
     # from .bias_and_artifact_correction:
     'correct_bias_field',
     'remove_grid_artifact',
+    # from .initialization:
+    'locally_rotate_velocity_fields',
+    'locally_translate_velocity_fields',
     ]
 
 """
