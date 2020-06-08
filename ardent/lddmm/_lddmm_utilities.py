@@ -1,8 +1,8 @@
 """
 Defines:
     Internal functions:
-        _validate_scalar_to_multi(value, size=None, dtype=float)
-        _validate_ndarray(array, minimum_ndim=0, required_ndim=None, dtype=None, 
+        _validate_scalar_to_multi(value, size=None, dtype=None)
+        _validate_ndarray(array, dtype=None, minimum_ndim=0, required_ndim=None, 
             forbid_object_dtype=True, broadcast_to_shape=None, reshape_to_shape=None, required_shape=None)
         _validate_resolution(resolution, ndim)
         _compute_axes(shape, resolution=1, origin='center')
@@ -13,6 +13,7 @@ Defines:
         resample(image, new_resolution, old_resolution=1, 
             err_to_larger=True, extrapolation_fill_value=None, 
             origin='center', method='linear', image_is_coords=False)
+        sinc_resample(array, new_shape)
 """
 
 import numpy as np
@@ -22,7 +23,7 @@ from scipy.interpolate import interpn
 from scipy.ndimage import gaussian_filter
 
 
-def _validate_scalar_to_multi(value, size=None, dtype=float):
+def _validate_scalar_to_multi(value, size=None, dtype=None):
     """
     If value's length is 1, upcast it to match size. 
     Otherwise, if it does not match size, raise error.
@@ -36,23 +37,23 @@ def _validate_scalar_to_multi(value, size=None, dtype=float):
     if size is not None:
         try:
             size = int(size)
-        except (TypeError, ValueError):
+        except (TypeError, ValueError) as exception:
             raise TypeError(
                 f"size must be either None or interpretable as an integer.\n" f"type(size): {type(size)}."
-            )
+            ) from exception
 
         if size < 0:
             raise ValueError(f"size must be non-negative.\n" f"size: {size}.")
 
     # Cast value to np.ndarray.
     try:
-        value = np.array(value, dtype)
-    except ValueError:
-        raise ValueError(f"value and dtype are incompatible with one another.")
+        value = np.array(value, dtype=dtype)
+    except ValueError as exception:
+        raise ValueError(f"value and dtype are incompatible with one another.") from exception
 
     # Validate value's dimensionality and length.
     if value.ndim == 0:
-        value = np.array([value])
+        value = np.array([value.item()])
     if value.ndim == 1:
         if size is not None and len(value) == 1:
             # Upcast scalar to match size.
@@ -69,11 +70,10 @@ def _validate_scalar_to_multi(value, size=None, dtype=float):
             f"value must not have more than 1 dimension.\n" f"value.ndim: {value.ndim}."
         )
 
-    # TODO: verify that this is necessary and rewrite/remove accordingly.
-    # Check for np.nan values.
-    if np.any(np.isnan(value)):
+    # Check for np.nan values if the dtype is not object.
+    if value.dtype != 'object' and np.any(np.isnan(value)):
         raise NotImplementedError(
-            "np.nan values encountered. What input led to this result?\n"
+            "np.nan values encountered for a value not cast to dtype object. What input led to this result?\n"
             "Write in an exception as appropriate."
         )
         raise ValueError(
@@ -86,10 +86,10 @@ def _validate_scalar_to_multi(value, size=None, dtype=float):
 
 def _validate_ndarray(
     array,
-    minimum_ndim=0,
-    required_ndim=None,
     dtype=None,
     forbid_object_dtype=True,
+    minimum_ndim=1,
+    required_ndim=None,
     broadcast_to_shape=None,
     reshape_to_shape=None,
     required_shape=None,
@@ -98,18 +98,19 @@ def _validate_ndarray(
     Cast (a copy of) array to a np.ndarray if possible and return it 
     unless it is noncompliant with minimum_ndim, required_ndim, and dtype.
     
-    Note:
+    Note: the following checks and validations are performed in order.
     
-    If required_ndim is None, _validate_ndarray will accept any object.
-    If it is possible to cast to dtype, otherwise an exception is raised.
+    If required_ndim is None or 0, _validate_ndarray will accept any object.
+    
+    array is cast to an np.ndarray of type dtype.
 
-    If np.array(array).ndim == 0 and required_ndim == 1, array will be upcast to ndim 1.
+    If minimum_ndim is provided and array.ndim < minimum_ndim, array.shape is left-padded by 1's until minimum_ndim is satisfied.
+
+    If required_ndim is provided and array.ndim != required_ndim, an exception is raised.
+
+    If forbid_object_dtype == True and array.dtype == object, an exception is raised, unless dtype is provided as object.
     
-    If forbid_object_dtype == True and the dtype is object, an exception is raised 
-    unless object is the dtype.
-    
-    If a shape is provided to broadcast_to_shape, unless noncompliance is found with 
-    required_ndim, array is broadcasted to that shape.
+    If a shape is provided to broadcast_to_shape, array is broadcasted to that shape.
     
     If a shape is provided to reshape_to_shape, array is reshaped to that shape.
 
@@ -155,17 +156,17 @@ def _validate_ndarray(
     # Cast array to np.ndarray.
     # Validate compliance with dtype.
     try:
-        array = np.array(array, dtype)  # Side effect: breaks alias.
-    except TypeError:
+        array = np.array(array, dtype) # Side effect: breaks alias.
+    except TypeError as exception:
         raise TypeError(
             f"array is of a type that is incompatible with dtype.\n"
             f"type(array): {type(array)}, dtype: {dtype}."
-        )
-    except ValueError:
+        ) from exception
+    except ValueError as exception:
         raise ValueError(
             f"array has a value that is incompatible with dtype.\n"
             f"array: {array}, \ntype(array): {type(array)}, dtype: {dtype}."
-        )
+        ) from exception
 
     # Verify compliance with forbid_object_dtype.
     if forbid_object_dtype:
@@ -175,22 +176,15 @@ def _validate_ndarray(
                 f"while forbid_object_dtype == True and dtype != object."
             )
 
+    # Validate compliance with minimum_ndim by left-padding the shape with 1's as necessary.
+    if array.ndim < minimum_ndim:
+        array = array.reshape(*[1] * (minimum_ndim - array.ndim), *array.shape)
+
     # Validate compliance with required_ndim.
     if required_ndim is not None and array.ndim != required_ndim:
-        # Upcast from ndim 0 to ndim 1 if appropriate.
-        if array.ndim == 0 and required_ndim == 1:
-            array = np.array([array])
-        else:
-            raise ValueError(
-                f"If required_ndim is not None, array.ndim must equal it unless array.ndim == 0 and required_ndin == 1.\n"
-                f"array.ndim: {array.ndim}, required_ndim: {required_ndim}."
-            )
-
-    # Verify compliance with minimum_ndim.
-    if array.ndim < minimum_ndim:
         raise ValueError(
-            f"array.ndim must be at least equal to minimum_ndim.\n"
-            f"array.ndim: {array.ndim}, minimum_ndim: {minimum_ndim}."
+            f"If required_ndim is not None, array.ndim must be made to equal it.\n"
+            f"array.ndim: {array.ndim}, required_ndim: {required_ndim}."
         )
 
     # Broadcast array if appropriate.
@@ -203,18 +197,24 @@ def _validate_ndarray(
 
     # Verify compliance with required_shape if appropriate.
     if required_shape is not None:
-        if not np.array_equal(array.reshape(required_shape).shape, array.shape):
-            raise ValueError(f"array must match required_shape.\n"
+        try:
+            required_shape_satisfied = np.array_equal(array.reshape(required_shape).shape, array.shape)
+        except ValueError as exception:
+            raise ValueError(
+                f"array is incompatible with required_shape.\n"
+                f"array.shape: {array.shape}, required_shape: {required_shape}."
+            ) from exception
+        if not required_shape_satisfied:
+            raise ValueError(f"array is compatible with required_shape but does not match required_shape.\n"
                              f"array.shape: {array.shape}, required_shape: {required_shape}.")
 
     return array
 
 
-# TODO: reverse order of arguments and propagate change throughout ardent.
-def _validate_resolution(resolution, ndim):
+def _validate_resolution(resolution, ndim, dtype=float):
     """Validate resolution to assure its length matches the dimensionality of image."""
 
-    resolution = _validate_scalar_to_multi(resolution, size=ndim)
+    resolution = _validate_scalar_to_multi(resolution, size=ndim, dtype=dtype)
 
     if np.any(resolution <= 0):
         raise ValueError(
@@ -356,23 +356,35 @@ def resample(
     """
     Resamples image from an old resolution to a new resolution.
     
-    Args:
-        image (np.ndarray): The image to be resampled
-        new_resolution (float, seq): The resolution of the resampled image.
-        old_resolution (float, seq, optional): The resolution of the input image. Defaults to 1.
-        err_to_larger (bool, optional): Determines whether to round the new shape up or down. Defaults to True.
-        extrapolation_fill_value (float, optional): The fill_value kwarg passed to interpn. Defaults to None.
-        origin (str, optional): The origin to use for the image axes and coordinates used internally. Defaults to 'center'.
-        method (str, optional): The method of interpolation, passed as the method kwarg in interpn. Defaults to 'linear'.
-        image_is_coords (bool, optional): If True, this implies that the last dimension of image is not a spatial dimension and not subject to interpolation. Defaults to False.
-        anti_aliasing (bool, optional): If True, applies a gaussian filter across dimensions to be downsampled before interpolating. Defaults to True.
+    Parameters
+    ----------
+        image: np.ndarray
+            The image to be resampled
+        new_resolution: float, seq
+            The resolution of the resampled image.
+        old_resolution: float, seq, optional
+            The resolution of the input image. By default 1.
+        err_to_larger: bool, optional
+            Determines whether to round the new shape up or down. By default True.
+        extrapolation_fill_value: float, optional
+            The fill_value kwarg passed to interpn. By default None.
+        origin: str, optional
+            The origin to use for the image axes and coordinates used internally. By default 'center'.
+        method: str, optional
+            The method of interpolation, passed as the method kwarg in interpn. By default 'linear'.
+        image_is_coords: bool, optional
+            If True, this implies that the last dimension of image is not a spatial dimension and not subject to interpolation. By default False.
+        anti_aliasing: bool, optional
+            If True, applies a gaussian filter across dimensions to be downsampled before interpolating. By default True.
     
-    Returns:
-        np.ndarray: The result of resampling image at new_resolution.
+    Returns
+    -------
+    np.ndarray
+        The result of resampling image at new_resolution.
     """
 
     # Validate inputs and define ndim & old_shape based on image_is_coords.
-    image = _validate_ndarray(image)  # Breaks alias.
+    image = _validate_ndarray(image) # Breaks alias.
     if image_is_coords:
         ndim = image.ndim - 1
         old_shape = image.shape[:-1]
@@ -419,3 +431,34 @@ def resample(
     )
 
     return new_image
+
+
+def sinc_resample(array, new_shape):
+    """
+    Resample array to new_shape by padding and truncating at high frequencies in the fourier domain.
+
+    Parameters
+    ----------
+    array : np.ndarray
+        The array to be resampled.
+    new_shape : seq
+        The shape to resample array to.
+
+    Returns
+    -------
+    np.ndarray
+        A copy of array after resampling.
+    """
+
+    # Validate inputs.
+    array = _validate_ndarray(array)
+    new_shape = _validate_ndarray(new_shape, dtype=int, required_ndim=1, required_shape=array.ndim)
+
+    resampled_array = np.copy(array)
+
+    for dim in range(array.ndim):
+        fourier_transformed_array = np.fft.rfft(resampled_array, axis=dim)
+        resampled_array = np.fft.irfft(fourier_transformed_array, axis=dim, n=new_shape[dim])
+    resampled_array *= resampled_array.size / array.size
+
+    return resampled_array
