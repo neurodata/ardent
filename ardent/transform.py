@@ -103,6 +103,8 @@ class Transform:
         # Image resolutions.
         template_resolution=None,
         target_resolution=None,
+        # Multiscale.
+        multiscales=None,
         # Preset.
         preset=None,
         # Iterations.
@@ -145,6 +147,14 @@ class Transform:
             target (np.ndarray): The potentially messier target image being registered to.
             template_resolution (float, list, optional): A scalar or list of scalars indicating the resolution of the template. Overrides 0 input. Defaults to 1.
             target_resolution (float, optional): A scalar or list of scalars indicating the resolution of the target. Overrides 0 input. Defaults to 1.
+            multiscales (float, seq, optional): A scalar, list of scalars, or list of lists or np.ndarray of scalars, determining the levels of downsampling at which the registration should be performed before moving on to the next. 
+                Values must be either all at least 1, or all at most 1. Both options are interpreted as downsampling. For example, multiscales=[10, 3, 1] will result in the template and target being downsampled by a factor of 10 and registered. 
+                This registration will be upsampled and used to initialize another registration of the template and target downsampled by 3, and then again on the undownsampled data. multiscales=[1/10, 1/3, 1] is equivalent. 
+                Alternatively, the scale for each dimension can be specified, e.g. multiscales=[ [10, 5, 5], [3, 3, 3], 1] for a 3D registration will result in the template and target downsampled by [10, 5, 5], then [3, 3, 3], then [1, 1, 1]. 
+                If provided with more than 1 value, all following arguments with the exceptions of initial_affine, initial_velocity_fields, and initial_contrast_coefficients, 
+                which may be provided for the first value in multiscales, may optionally be provided as sequences with length equal to the number of values provided to multiscales. Each such value is used at the corresponding scale. 
+                Additionally, template_resolution and target_resolution cannot be provided for each scale in multiscales. Rather, they are given once to indicate the resolution of the template and target as input.
+                multiscales should be provided as descending values. Defaults to 1.
             preset (str, optional): A string specifying a recognized preset, or subset of the following arguments to provide automatically, overridden by values specified in this call. Defaults to None.
             num_iterations (int, optional): The total number of iterations. Defaults to 300.
             num_affine_only_iterations (int, optional): The number of iterations at the start of the process without deformative adjustments. Defaults to 100.
@@ -183,6 +193,8 @@ class Transform:
             # Image resolutions.
             template_resolution=template_resolution,
             target_resolution=target_resolution,
+            # Multiscale.
+            multiscales=multiscales,
             # Iterations.
             num_iterations=num_iterations,
             num_affine_only_iterations=num_affine_only_iterations,
