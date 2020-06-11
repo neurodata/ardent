@@ -17,6 +17,7 @@ def _generate_rotation_matrix(angles):
     ndim = len(angles) # TODO: this is wrong, for ndim > 3, len(angles) > ndim. ndim_choose_2 = len(angles).
 
     n_rotation_planes = factorial(ndim) / (factorial(ndim - 2) * factorial(2))
+    n_rotation_planes = ndim * (ndim - 1)
 
     rotation_matrix = np.zeros((n_rotation_planes, ndim, ndim))
 
