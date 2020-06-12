@@ -119,6 +119,7 @@ class Transform:
         # Velocity field specifiers.
         sigma_regularization=None,
         smooth_length=None,
+        preconditioner_smooth_length=None,
         num_timesteps=None,
         # Contrast map specifiers.
         contrast_order=None,
@@ -164,6 +165,8 @@ class Transform:
             fixed_affine_scale (float, optional): The scale to impose on the affine at all iterations. If None, no scale is imposed. Otherwise, this has the effect of making the affine always rigid. Defaults to None.
             sigma_regularization (float, optional): A scalar indicating the freedom to deform. Overrides 0 input. Defaults to 10 * np.max(self.template_resolution).
             smooth_length (float, optional): The length scale of smoothing. Overrides 0 input. Defaults to 2 * np.max(self.template_resolution).
+            preconditioner_smooth_length (float, optional): The length of preconditioner smoothing of the velocity_fields in physical units. 
+                Determines the optimization of the velocity_fields. By default 5 * np.max(self.template_resolution).
             num_timesteps (int, optional): The number of composed sub-transformations in the diffeomorphism. Overrides 0 input. Defaults to 5.
             contrast_order (int, optional): The order of the polynomial fit between the contrasts of the template and target. Overrides 0 input. Defaults to 1.
             spatially_varying_contrast_map (bool, optional): If True, uses a polynomial per voxel to compute the contrast map rather than a single polynomial. Defaults to False.
@@ -207,6 +210,7 @@ class Transform:
             # Velocity field specifiers.
             sigma_regularization=sigma_regularization,
             smooth_length=smooth_length,
+            preconditioner_smooth_length=preconditioner_smooth_length,
             num_timesteps=num_timesteps,
             # Contrast map specifiers.
             contrast_order=contrast_order,
