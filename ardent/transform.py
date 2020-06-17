@@ -118,8 +118,8 @@ class Transform:
         fixed_affine_scale=None,
         # Velocity field specifiers.
         sigma_regularization=None,
-        smooth_length=None,
-        preconditioner_smooth_length=None,
+        velocity_smooth_length=None,
+        preconditioner_velocity_smooth_length=None,
         num_timesteps=None,
         # Contrast map specifiers.
         contrast_order=None,
@@ -127,6 +127,7 @@ class Transform:
         contrast_maxiter=None,
         contrast_tolerance=None,
         sigma_contrast=None,
+        contrast_smooth_length=None,
         # Artifact specifiers.
         check_artifacts=None,
         sigma_artifact=None,
@@ -164,8 +165,8 @@ class Transform:
             deformative_stepsize (float, optional): The stepsize for deformative adjustments. Optimal values are problem-specific. If equal to 0 then the result is affine-only registration. Defaults to 0.
             fixed_affine_scale (float, optional): The scale to impose on the affine at all iterations. If None, no scale is imposed. Otherwise, this has the effect of making the affine always rigid. Defaults to None.
             sigma_regularization (float, optional): A scalar indicating the freedom to deform. Overrides 0 input. Defaults to 10 * np.max(self.template_resolution).
-            smooth_length (float, optional): The length scale of smoothing. Overrides 0 input. Defaults to 2 * np.max(self.template_resolution).
-            preconditioner_smooth_length (float, optional): The length of preconditioner smoothing of the velocity_fields in physical units. 
+            velocity_smooth_length (float, optional): The length scale of smoothing. Overrides 0 input. Defaults to 2 * np.max(self.template_resolution).
+            preconditioner_velocity_smooth_length (float, optional): The length of preconditioner smoothing of the velocity_fields in physical units. 
                 Determines the optimization of the velocity_fields. By default 5 * np.max(self.template_resolution).
             num_timesteps (int, optional): The number of composed sub-transformations in the diffeomorphism. Overrides 0 input. Defaults to 5.
             contrast_order (int, optional): The order of the polynomial fit between the contrasts of the template and target. Overrides 0 input. Defaults to 1.
@@ -173,6 +174,7 @@ class Transform:
             contrast_maxiter (int, optional): The maximum number of iterations to converge toward the optimal contrast_coefficients if spatially_varying_contrast_map == True. Overrides 0 input. Defaults to 100.
             contrast_tolerance (float, optional): The tolerance for convergence to the optimal contrast_coefficients if spatially_varying_contrast_map == True. Defaults to 1e-5.
             sigma_contrast (float, optional): The scale of variation in the contrast_coefficients if spatially_varying_contrast_map == True. Overrides 0 input. Defaults to 1e-2.
+            contrast_smooth_length (float, optional): The length scale of smoothing of the contrast_coefficients if spatially_varying_contrast_map == True. Overrides 0 input. Defaults to 2 * np.max(self.target_resolution).
             check_artifacts (bool, optional): If True, artifacts are jointly classified with registration using sigma_artifact. Defaults to False.
             sigma_artifact (float, optional): The level of expected variation between artifact and non-artifact intensities. Overrides 0 input. Defaults to 5 * sigma_matching.
             sigma_matching (float, optional): An estimate of the spread of the noise in the target, 
@@ -209,8 +211,8 @@ class Transform:
             fixed_affine_scale=fixed_affine_scale,
             # Velocity field specifiers.
             sigma_regularization=sigma_regularization,
-            smooth_length=smooth_length,
-            preconditioner_smooth_length=preconditioner_smooth_length,
+            velocity_smooth_length=velocity_smooth_length,
+            preconditioner_velocity_smooth_length=preconditioner_velocity_smooth_length,
             num_timesteps=num_timesteps,
             # Contrast map specifiers.
             contrast_order=contrast_order,
@@ -218,6 +220,7 @@ class Transform:
             contrast_maxiter=contrast_maxiter,
             contrast_tolerance=contrast_tolerance,
             sigma_contrast=sigma_contrast,
+            contrast_smooth_length=contrast_smooth_length,
             # Artifact specifiers.
             check_artifacts=check_artifacts,
             sigma_artifact=sigma_artifact,
