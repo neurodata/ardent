@@ -157,9 +157,10 @@ class _Lddmm:
                 )
             )**(2 * self.fourier_filter_power)
         )
+        fourier_target_coords = _compute_coords(self.target.shape, 1 / (self.target_resolution * self.target.shape), origin='zero')
         self.contrast_high_pass_filter = (
             1 - self.contrast_smooth_length**2 * (
-                np.sum((-2 + 2 * np.cos(2 * np.pi * self.template_resolution * fourier_template_coords)) / self.template_resolution**2, -1)
+                np.sum((-2 + 2 * np.cos(2 * np.pi * self.target_resolution * fourier_target_coords)) / self.target_resolution**2, -1)
             )
         )**self.fourier_filter_power / self.sigma_contrast
 
