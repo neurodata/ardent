@@ -115,7 +115,7 @@ class _Lddmm:
         self.contrast_maxiter = int(contrast_maxiter) if contrast_maxiter else 5
         self.contrast_tolerance = float(contrast_tolerance) if contrast_tolerance else 1e-5
         self.sigma_contrast = float(sigma_contrast) if sigma_contrast else 1e-2
-        self.contrast_smooth_length = float(contrast_smooth_length) if contrast_smooth_length else 2 * np.max(self.target_resolution)
+        self.contrast_smooth_length = float(contrast_smooth_length) if contrast_smooth_length else 10 * np.max(self.target_resolution)
 
         # Artifact specifiers.
         self.check_artifacts = bool(check_artifacts) if check_artifacts is not None else False
@@ -157,6 +157,11 @@ class _Lddmm:
                 )
             )**(2 * self.fourier_filter_power)
         )
+        self.contrast_high_pass_filter = (
+            1 - self.contrast_smooth_length**2 * (
+                np.sum((-2 + 2 * np.cos(2 * np.pi * self.template_resolution * fourier_template_coords)) / self.template_resolution**2, -1)
+            )
+        )**self.fourier_filter_power / self.sigma_contrast
 
         # Dynamics.
         if initial_affine is None:
@@ -500,6 +505,60 @@ class _Lddmm:
                 self.contrast_polynomial_basis[..., power] = self.deformed_template**power
 
             if self.spatially_varying_contrast_map:
+                # Compute and set self.contrast_coefficients for self.spatially_varying_contrast_map == True.
+
+                '=============================================================================================================================='
+
+
+
+
+
+                weights = np.sqrt(self.matching_weights) / self.sigma_matching
+
+                RHS = self.contrast_polynomial_basis * (weights**2 * self.target)[..., None]
+
+                # Reformulate with block elimination.
+                DD = np.fft.ifftn(np.fftn(self.contrast_coefficients) * self.contrast_high_pass_filter).real
+                BIR = np.fft.ifftn(np.fftn(RHS) / self.contrast_high_pass_filter).real
+                for _ in range(self.contrast_maxiter):
+                    OPD = np.fft.ifftn(np.fft.fftn((
+                        np.sum(
+                            np.fft.ifftn(np.fft.fftn(DD) / self.contrast_high_pass_filter).real * self.contrast_polynomial_basis, 
+                            axis=-1,
+                        ) * weights**2
+                    )[..., None] * self.contrast_polynomial_basis) / self.contrast_high_pass_filter).real + DD
+                    residual = OPD - BIR
+                    # Compute the optimal step size.
+                    ORES = np.fft.ifftn(np.fft.fftn((
+                        np.sum(
+                            np.fft.ifftn(np.fft.fftn(residual) / self.contrast_high_pass_filter).real * self.contrast_polynomial_basis, 
+                            axis=-1,
+                        ) * weights**2
+                    )[..., None] * self.contrast_polynomial_basis) / self.contrast_high_pass_filter).real + residual
+                    EP = np.sum(residual**2) / np.sum(ORES * residual)
+                    # Take gradient descent step at half the optimal step size.
+                    DD -= EP * residual / 2
+                
+                self.contrast_coefficients = np.fft.ifftn(np.fft.fftn(DD) / self.contrast_high_pass_filter).real
+
+
+
+                APPLYOP = np.fft.ifftn(np.fft.fftn((
+                    np.sum(
+                        np.fft.ifftn(np.fft.fftn(self.contrast_coefficients) / self.contrast_high_pass_filter).real * self.contrast_polynomial_basis, 
+                        axis=-1,
+                    ) * weights**2
+                )[..., None] * self.contrast_polynomial_basis) / self.contrast_high_pass_filter).real + self.contrast_coefficients
+
+
+
+
+
+
+                '=============================================================================================================================='
+
+            # Spatially varying contrast code regularized like velocity_fields using scipy.sparse.linalg.cg, pending depracation in favor of above.
+            elif False:
                 # Compute and set self.contrast_coefficients for self.spatially_varying_contrast_map == True.
 
                 # Shape: (*self.target.shape, self.contrast_order + 1, self.contrast_order + 1)
