@@ -518,37 +518,37 @@ class _Lddmm:
                 RHS = self.contrast_polynomial_basis * (weights**2 * self.target)[..., None]
 
                 # Reformulate with block elimination.
-                DD = np.fft.ifftn(np.fft.fftn(self.contrast_coefficients) * self.contrast_high_pass_filter).real
-                BIR = np.fft.ifftn(np.fft.fftn(RHS) / self.contrast_high_pass_filter).real
+                DD = np.fft.ifftn(np.fft.fftn(self.contrast_coefficients) * self.contrast_high_pass_filter[..., None]).real
+                BIR = np.fft.ifftn(np.fft.fftn(RHS) / self.contrast_high_pass_filter[..., None]).real
                 for _ in range(self.contrast_maxiter):
                     OPD = np.fft.ifftn(np.fft.fftn((
                         np.sum(
-                            np.fft.ifftn(np.fft.fftn(DD) / self.contrast_high_pass_filter).real * self.contrast_polynomial_basis, 
+                            np.fft.ifftn(np.fft.fftn(DD) / self.contrast_high_pass_filter[..., None]).real * self.contrast_polynomial_basis, 
                             axis=-1,
                         ) * weights**2
-                    )[..., None] * self.contrast_polynomial_basis) / self.contrast_high_pass_filter).real + DD
+                    )[..., None] * self.contrast_polynomial_basis) / self.contrast_high_pass_filter[..., None]).real + DD
                     residual = OPD - BIR
                     # Compute the optimal step size.
                     ORES = np.fft.ifftn(np.fft.fftn((
                         np.sum(
-                            np.fft.ifftn(np.fft.fftn(residual) / self.contrast_high_pass_filter).real * self.contrast_polynomial_basis, 
+                            np.fft.ifftn(np.fft.fftn(residual) / self.contrast_high_pass_filter[..., None]).real * self.contrast_polynomial_basis, 
                             axis=-1,
                         ) * weights**2
-                    )[..., None] * self.contrast_polynomial_basis) / self.contrast_high_pass_filter).real + residual
+                    )[..., None] * self.contrast_polynomial_basis) / self.contrast_high_pass_filter[..., None]).real + residual
                     EP = np.sum(residual**2) / np.sum(ORES * residual)
                     # Take gradient descent step at half the optimal step size.
                     DD -= EP * residual / 2
                 
-                self.contrast_coefficients = np.fft.ifftn(np.fft.fftn(DD) / self.contrast_high_pass_filter).real
+                self.contrast_coefficients = np.fft.ifftn(np.fft.fftn(DD) / self.contrast_high_pass_filter[..., None]).real
 
 
 
                 APPLYOP = np.fft.ifftn(np.fft.fftn((
                     np.sum(
-                        np.fft.ifftn(np.fft.fftn(self.contrast_coefficients) / self.contrast_high_pass_filter).real * self.contrast_polynomial_basis, 
+                        np.fft.ifftn(np.fft.fftn(self.contrast_coefficients) / self.contrast_high_pass_filter[..., None]).real * self.contrast_polynomial_basis, 
                         axis=-1,
                     ) * weights**2
-                )[..., None] * self.contrast_polynomial_basis) / self.contrast_high_pass_filter).real + self.contrast_coefficients
+                )[..., None] * self.contrast_polynomial_basis) / self.contrast_high_pass_filter[..., None]).real + self.contrast_coefficients
 
 
 
