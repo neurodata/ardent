@@ -510,46 +510,58 @@ class _Lddmm:
 
                 '=============================================================================================================================='
 
+                # C is contrast_coefficients.
+                # B is the contrast_polynomial_basis.
+                # W is weights.
+                # L is contrast_high_pass_filter.
+                # This is the minimization problem: sum(|BC - J|^2 W^2 / 2) + sum(|LC|^2 / 2).
+                # The linear equation we need to solve for C is this: W^2 B^T B C  + L^T L C = W^2 B^T J.
+                # Where W acts by pointwise multiplication, B acts by matrix multiplication at every point, and L acts by filtering in the Fourier domain.
+                # Let L C = D. --> C = L^{-1} D.
+                # This reformulates the problem to: W^2 B^T B L^{-1} D + L^T D = W^2 B^T J.
+                # Then, to make it nicer we act on both sides with L^{-T}, yielding: L^{-T}(B^T B) L^{-1}D + D = L^{-T} W^2 B^t J.
+                # Then we factor the left side: [L^{-T} B^T  B L^{-1} + identity]D = L^{-T}W^2 B^T J
 
+                spatial_ndim = self.contrast_polynomial_basis.ndim - 1
 
-
-
+                # Represents W in the equation.
                 weights = np.sqrt(self.matching_weights) / self.sigma_matching
 
-                RHS = self.contrast_polynomial_basis * (weights**2 * self.target)[..., None]
+                # Represents the right hand side of the equation.
+                right_hand_side = self.contrast_polynomial_basis * (weights**2 * self.target)[..., None]
 
                 # Reformulate with block elimination.
-                DD = np.fft.ifftn(np.fft.fftn(self.contrast_coefficients) * self.contrast_high_pass_filter[..., None]).real
-                BIR = np.fft.ifftn(np.fft.fftn(RHS) / self.contrast_high_pass_filter[..., None]).real
+                high_pass_contrast_coefficients = np.fft.ifftn(np.fft.fftn(self.contrast_coefficients, axes=range(spatial_ndim)) * self.contrast_high_pass_filter[..., None], axes=range(spatial_ndim)).real
+                low_pass_right_hand_side = np.fft.ifftn(np.fft.fftn(right_hand_side, axes=range(spatial_ndim)) / self.contrast_high_pass_filter[..., None], axes=range(spatial_ndim)).real
                 for _ in range(self.contrast_maxiter):
-                    OPD = np.fft.ifftn(np.fft.fftn((
+                    linear_operator_high_pass_contrast_coefficients = np.fft.ifftn(np.fft.fftn((
                         np.sum(
-                            np.fft.ifftn(np.fft.fftn(DD) / self.contrast_high_pass_filter[..., None]).real * self.contrast_polynomial_basis, 
+                            np.fft.ifftn(np.fft.fftn(high_pass_contrast_coefficients, axes=range(spatial_ndim)) / self.contrast_high_pass_filter[..., None], axes=range(spatial_ndim)).real * self.contrast_polynomial_basis, 
                             axis=-1,
                         ) * weights**2
-                    )[..., None] * self.contrast_polynomial_basis) / self.contrast_high_pass_filter[..., None]).real + DD
-                    residual = OPD - BIR
+                    )[..., None] * self.contrast_polynomial_basis, axes=range(spatial_ndim)) / self.contrast_high_pass_filter[..., None], axes=range(spatial_ndim))).real + high_pass_contrast_coefficients
+                    residual = linear_operator_high_pass_contrast_coefficients - low_pass_right_hand_side
                     # Compute the optimal step size.
-                    ORES = np.fft.ifftn(np.fft.fftn((
+                    linear_operator_residual = np.fft.ifftn(np.fft.fftn((
                         np.sum(
-                            np.fft.ifftn(np.fft.fftn(residual) / self.contrast_high_pass_filter[..., None]).real * self.contrast_polynomial_basis, 
+                            np.fft.ifftn(np.fft.fftn(residual, axes=range(spatial_ndim)) / self.contrast_high_pass_filter[..., None], axes=range(spatial_ndim)).real * self.contrast_polynomial_basis, 
                             axis=-1,
                         ) * weights**2
-                    )[..., None] * self.contrast_polynomial_basis) / self.contrast_high_pass_filter[..., None]).real + residual
-                    EP = np.sum(residual**2) / np.sum(ORES * residual)
+                    )[..., None] * self.contrast_polynomial_basis, axes=range(spatial_ndim)) / self.contrast_high_pass_filter[..., None], axes=range(spatial_ndim))).real + residual
+                    optimal_stepsize = np.sum(residual**2) / np.sum(linear_operator_residual * residual)
                     # Take gradient descent step at half the optimal step size.
-                    DD -= EP * residual / 2
+                    high_pass_contrast_coefficients -= optimal_stepsize * residual / 2
                 
-                self.contrast_coefficients = np.fft.ifftn(np.fft.fftn(DD) / self.contrast_high_pass_filter[..., None]).real
+                self.contrast_coefficients = np.fft.ifftn(np.fft.fftn(high_pass_contrast_coefficients, axes=range(spatial_ndim)) / self.contrast_high_pass_filter[..., None], axes=range(spatial_ndim)).real
 
 
 
-                APPLYOP = np.fft.ifftn(np.fft.fftn((
+                APPLYOP_to_contrast_coefficients = np.fft.ifftn(np.fft.fftn((
                     np.sum(
-                        np.fft.ifftn(np.fft.fftn(self.contrast_coefficients) / self.contrast_high_pass_filter[..., None]).real * self.contrast_polynomial_basis, 
+                        np.fft.ifftn(np.fft.fftn(self.contrast_coefficients, axes=range(spatial_ndim)) / self.contrast_high_pass_filter[..., None], axes=range(spatial_ndim)).real * self.contrast_polynomial_basis, 
                         axis=-1,
                     ) * weights**2
-                )[..., None] * self.contrast_polynomial_basis) / self.contrast_high_pass_filter[..., None]).real + self.contrast_coefficients
+                )[..., None] * self.contrast_polynomial_basis, axes=range(spatial_ndim)) / self.contrast_high_pass_filter[..., None], axes=range(spatial_ndim))).real + self.contrast_coefficients
 
 
 
