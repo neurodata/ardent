@@ -539,7 +539,7 @@ class _Lddmm:
                             np.fft.ifftn(np.fft.fftn(high_pass_contrast_coefficients, axes=range(spatial_ndim)) / self.contrast_high_pass_filter[..., None], axes=range(spatial_ndim)).real * self.contrast_polynomial_basis, 
                             axis=-1,
                         ) * weights**2
-                    )[..., None] * self.contrast_polynomial_basis, axes=range(spatial_ndim)) / self.contrast_high_pass_filter[..., None], axes=range(spatial_ndim))).real + high_pass_contrast_coefficients
+                    )[..., None] * self.contrast_polynomial_basis, axes=range(spatial_ndim)) / self.contrast_high_pass_filter[..., None], axes=range(spatial_ndim)).real + high_pass_contrast_coefficients
                     residual = linear_operator_high_pass_contrast_coefficients - low_pass_right_hand_side
                     # Compute the optimal step size.
                     linear_operator_residual = np.fft.ifftn(np.fft.fftn((
@@ -547,7 +547,7 @@ class _Lddmm:
                             np.fft.ifftn(np.fft.fftn(residual, axes=range(spatial_ndim)) / self.contrast_high_pass_filter[..., None], axes=range(spatial_ndim)).real * self.contrast_polynomial_basis, 
                             axis=-1,
                         ) * weights**2
-                    )[..., None] * self.contrast_polynomial_basis, axes=range(spatial_ndim)) / self.contrast_high_pass_filter[..., None], axes=range(spatial_ndim))).real + residual
+                    )[..., None] * self.contrast_polynomial_basis, axes=range(spatial_ndim)) / self.contrast_high_pass_filter[..., None], axes=range(spatial_ndim)).real + residual
                     optimal_stepsize = np.sum(residual**2) / np.sum(linear_operator_residual * residual)
                     # Take gradient descent step at half the optimal step size.
                     high_pass_contrast_coefficients -= optimal_stepsize * residual / 2
@@ -561,7 +561,7 @@ class _Lddmm:
                         np.fft.ifftn(np.fft.fftn(self.contrast_coefficients, axes=range(spatial_ndim)) / self.contrast_high_pass_filter[..., None], axes=range(spatial_ndim)).real * self.contrast_polynomial_basis, 
                         axis=-1,
                     ) * weights**2
-                )[..., None] * self.contrast_polynomial_basis, axes=range(spatial_ndim)) / self.contrast_high_pass_filter[..., None], axes=range(spatial_ndim))).real + self.contrast_coefficients
+                )[..., None] * self.contrast_polynomial_basis, axes=range(spatial_ndim)) / self.contrast_high_pass_filter[..., None], axes=range(spatial_ndim)).real + self.contrast_coefficients
 
 
 
