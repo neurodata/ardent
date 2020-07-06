@@ -282,7 +282,7 @@ class Transform:
         self.register(**self._registration_parameters)
 
 
-    def transform_image(self, subject, subject_resolution=1, output_resolution=None, deform_to="template", extrapolation_fill_value=None, save_path=None):
+    def transform_image(self, subject, subject_resolution=1, output_resolution=None, output_shape=None, deform_to="template", extrapolation_fill_value=None, save_path=None):
         """
         Apply the transformation--computed by the last call to self.register--to subject, 
         deforming it into the space of deform_to.
@@ -291,8 +291,11 @@ class Transform:
             subject (np.ndarray): The image to deform.
             subject_resolution (float, seq, optional): The resolution of subject in each dimension, or just one scalar to indicate isotropy. Defaults to 1.
             deform_to (str, optional): Either 'template' or 'target' indicating which to deform subject to match. Defaults to: "template".
-            output_resolution (NoneType, float, seq, optional): The resolution of the output deformed_subject in each dimension, 
-                or just one scalar to indicate isotropy, or None to indicate the resolution of template or target based on deform_to. Defaults to None.
+            output_resolution (float, seq, optional): The resolution of the output deformed_subject in each dimension, 
+                or just one scalar to indicate isotropy, or None to indicate the resolution of template or target based on deform_to. 
+                Cannot be provided along with output_resolution. Defaults to None.
+            output_shape (seq, optional): The shape of the output deformed_subject, or None to indicate the shape of the template or target based on deform_to. 
+                Cannot be provided along with output_resolution. By default None.
             extrapolation_fill_value (float, NoneType, optional): The fill_value kwarg passed to scipy.interpolate.interpn; it should be background intensity. 
                 If None, this is set to a low quantile of the subject's 10**-subject.ndim quantile to estimate background. Defaults to None.
             save_path (str, Path, optional): The full path to save the output to. Defaults to: None.
@@ -305,6 +308,7 @@ class Transform:
             subject=subject,
             subject_resolution=subject_resolution,
             output_resolution=output_resolution,
+            output_shape=output_shape,
             deform_to=deform_to,
             extrapolation_fill_value=extrapolation_fill_value,
             **self.get_lddmm_dict(),
