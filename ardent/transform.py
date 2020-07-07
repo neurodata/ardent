@@ -120,6 +120,7 @@ class Transform:
         sigma_regularization=None,
         velocity_smooth_length=None,
         preconditioner_velocity_smooth_length=None,
+        maximum_velocity_fields_update=None,
         num_timesteps=None,
         # Contrast map specifiers.
         contrast_order=None,
@@ -128,11 +129,14 @@ class Transform:
         contrast_tolerance=None,
         sigma_contrast=None,
         contrast_smooth_length=None,
-        # Artifact specifiers.
-        check_artifacts=None,
-        sigma_artifact=None,
         # Smoothness vs. accuracy tradeoff.
         sigma_matching=None,
+        # Classification specifiers.
+        classify_and_weight_voxels=None,
+        sigma_artifact=None,
+        sigma_background=None,
+        artifact_prior=None,
+        background_prior=None,
         # Initial values.
         initial_affine=None,
         initial_velocity_fields=None,
@@ -168,6 +172,7 @@ class Transform:
             velocity_smooth_length (float, optional): The length scale of smoothing. Overrides 0 input. Defaults to 2 * np.max(self.template_resolution).
             preconditioner_velocity_smooth_length (float, optional): The length of preconditioner smoothing of the velocity_fields in physical units. 
                 Determines the optimization of the velocity_fields. By default 5 * np.max(self.template_resolution).
+            maximum_velocity_fields_update (float, optional): The maximum allowed update to the velocity_fields in units of voxels. Defaults to 1.
             num_timesteps (int, optional): The number of composed sub-transformations in the diffeomorphism. Overrides 0 input. Defaults to 5.
             contrast_order (int, optional): The order of the polynomial fit between the contrasts of the template and target. Overrides 0 input. Defaults to 1.
             spatially_varying_contrast_map (bool, optional): If True, uses a polynomial per voxel to compute the contrast map rather than a single polynomial. Defaults to False.
@@ -175,11 +180,14 @@ class Transform:
             contrast_tolerance (float, optional): The tolerance for convergence to the optimal contrast_coefficients if spatially_varying_contrast_map == True. Defaults to 1e-5.
             sigma_contrast (float, optional): The scale of variation in the contrast_coefficients if spatially_varying_contrast_map == True. Overrides 0 input. Defaults to 1e-2.
             contrast_smooth_length (float, optional): The length scale of smoothing of the contrast_coefficients if spatially_varying_contrast_map == True. Overrides 0 input. Defaults to 2 * np.max(self.target_resolution).
-            check_artifacts (bool, optional): If True, artifacts are jointly classified with registration using sigma_artifact. Defaults to False.
-            sigma_artifact (float, optional): The level of expected variation between artifact and non-artifact intensities. Overrides 0 input. Defaults to 5 * sigma_matching.
             sigma_matching (float, optional): An estimate of the spread of the noise in the target, 
                 representing the tradeoff between the regularity and accuracy of the registration, where a smaller value should result in a less smooth, more accurate result. 
                 Typically it should be set to an estimate of the standard deviation of the noise in the image, particularly with artifacts. Overrides 0 input. Defaults to the standard deviation of the target.
+            classify_and_weight_voxels (bool, optional): If True, artifacts are jointly classified with registration using sigma_artifact. Defaults to False.
+            sigma_artifact (float, optional): The level of expected variation between artifact and non-artifact intensities. Overrides 0 input. Defaults to 5 * sigma_matching.
+            sigma_background (float, optional): The level of expected variation between background and non-background intensities. Overrides 0 input. Defaults to 2 * sigma_matching.
+            artifact_prior (float, optional): The prior probability at which we expect to find that any given voxel is artifact. Defaults to 1/3.
+            background_prior (float, optional): The prior probability at which we expect to find that any given voxel is background. Defaults to 1/3.
             initial_affine (np.ndarray, optional): The affine array that the registration will begin with. Defaults to np.eye(template.ndim + 1).
             initial_velocity_fields (np.ndarray, optional): The velocity fields that the registration will begin with. Defaults to all zeros.
             initial_contrast_coefficients (np.ndarray, optional): The contrast coefficients that the registration will begin with. 
@@ -213,6 +221,7 @@ class Transform:
             sigma_regularization=sigma_regularization,
             velocity_smooth_length=velocity_smooth_length,
             preconditioner_velocity_smooth_length=preconditioner_velocity_smooth_length,
+            maximum_velocity_fields_update=maximum_velocity_fields_update,
             num_timesteps=num_timesteps,
             # Contrast map specifiers.
             contrast_order=contrast_order,
@@ -221,11 +230,14 @@ class Transform:
             contrast_tolerance=contrast_tolerance,
             sigma_contrast=sigma_contrast,
             contrast_smooth_length=contrast_smooth_length,
-            # Artifact specifiers.
-            check_artifacts=check_artifacts,
-            sigma_artifact=sigma_artifact,
             # # vs. accuracy tradeoff.
             sigma_matching=sigma_matching,
+            # Classification specifiers.
+            classify_and_weight_voxels=classify_and_weight_voxels,
+            sigma_artifact=sigma_artifact,
+            sigma_background=sigma_background,
+            artifact_prior=artifact_prior,
+            background_prior=background_prior,
             # Initial values.
             initial_affine=initial_affine,
             initial_velocity_fields=initial_velocity_fields,
