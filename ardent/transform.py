@@ -125,8 +125,7 @@ class Transform:
         # Contrast map specifiers.
         contrast_order=None,
         spatially_varying_contrast_map=None,
-        contrast_maxiter=None,
-        contrast_tolerance=None,
+        contrast_iterations=None,
         sigma_contrast=None,
         contrast_smooth_length=None,
         # Smoothness vs. accuracy tradeoff.
@@ -177,8 +176,7 @@ class Transform:
             num_timesteps (int, optional): The number of composed sub-transformations in the diffeomorphism. Overrides 0 input. Defaults to 5.
             contrast_order (int, optional): The order of the polynomial fit between the contrasts of the template and target. Overrides 0 input. Defaults to 1.
             spatially_varying_contrast_map (bool, optional): If True, uses a polynomial per voxel to compute the contrast map rather than a single polynomial. Defaults to False.
-            contrast_maxiter (int, optional): The maximum number of iterations to converge toward the optimal contrast_coefficients if spatially_varying_contrast_map == True. Overrides 0 input. Defaults to 5.
-            contrast_tolerance (float, optional): Deprecated. The tolerance for convergence to the optimal contrast_coefficients if spatially_varying_contrast_map == True. Defaults to 1e-5.
+            contrast_iterations (int, optional): The number of iterations of gradient descent to converge toward the optimal contrast_coefficients if spatially_varying_contrast_map == True. Overrides 0 input. Defaults to 5.
             sigma_contrast (float, optional): The scale of variation in the contrast_coefficients if spatially_varying_contrast_map == True. Overrides 0 input. Defaults to 1e-2.
             contrast_smooth_length (float, optional): The length scale of smoothing of the contrast_coefficients if spatially_varying_contrast_map == True. Overrides 0 input. Defaults to 2 * np.max(self.target_resolution).
             sigma_matching (float, optional): An estimate of the spread of the noise in the target, 
@@ -227,8 +225,7 @@ class Transform:
             # Contrast map specifiers.
             contrast_order=contrast_order,
             spatially_varying_contrast_map=spatially_varying_contrast_map,
-            contrast_maxiter=contrast_maxiter,
-            contrast_tolerance=contrast_tolerance,
+            contrast_iterations=contrast_iterations,
             sigma_contrast=sigma_contrast,
             contrast_smooth_length=contrast_smooth_length,
             # # vs. accuracy tradeoff.
