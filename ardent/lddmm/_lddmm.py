@@ -1059,7 +1059,9 @@ def lddmm_register(
         fixed_affine_scale: float, optional
             The scale to impose on the affine at all iterations. If None, no scale is imposed. Otherwise, this has the effect of making the affine always rigid. By default None.
         sigma_regularization: float, optional
-            A scalar indicating the freedom to deform. Overrides 0 input. By default np.inf.
+            A scalar indicating the freedom to deform. Small values put harsher constraints on the smoothness of a deformation. 
+            For sufficiently large values, the registration will eventually recreate the target exactly, but this may still be appropriate for a finite number of iterations. 
+            Overrides 0 input. By default np.inf.
         velocity_smooth_length: float, optional
             The length scale of smoothing of the velocity_fields in physical units. Affects the optimum velocity_fields smoothness. By default 2 * np.max(self.template_resolution).
         preconditioner_velocity_smooth_length: float, optional
@@ -1439,7 +1441,7 @@ def _transform_image(
             extrapolation_fill_value=None, 
             image_is_coords=True, 
         )
-    else:
+    if output_shape is not None:
         # resize position_field to match output_shape.
         position_field = resize(position_field, output_shape)
 
