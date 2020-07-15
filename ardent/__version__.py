@@ -12,16 +12,16 @@ r"""
 # This file is read by setup.py and executed as a string.
 
 __name__ = "ardent"
-__description__ = "A tool for image registration."
+__description__ = "A tool for nonlinear image registration."
 __url__ = "https://github.com/neurodata/ardent"
-__version__ = "0.0.1"
+__version__ = "1.0.0"
 __author__ = "Devin Crowley"
 __author_email__ = "devin.g.crowley@gmail.com"
 __license__ = "Apache License 2.0"
 __min_python_version__ = (3, 6)
 __python_requires__ = ">={}.{}".format(*__min_python_version__)
 __classifiers__ = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering :: Mathematics",
     "License :: OSI Approved :: Apache Software License",
