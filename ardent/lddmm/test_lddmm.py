@@ -5,14 +5,14 @@ import numpy as np
 from scipy.linalg import inv
 from scipy.ndimage import rotate
 
-from skimage.registration import _lddmm_utilities
+from . import _lddmm_utilities
 
-from skimage.registration._lddmm import generate_position_field
-from skimage.registration._lddmm import _transform_image
-from skimage.registration._lddmm import lddmm_transform_image
-from skimage.registration._lddmm import lddmm_register
-from skimage.registration._lddmm import _transform_points
-from skimage.registration._lddmm import lddmm_transform_points
+from ._lddmm import generate_position_field
+from ._lddmm import _transform_image
+from ._lddmm import lddmm_transform_image
+from ._lddmm import lddmm_register
+from ._lddmm import _transform_points
+from ._lddmm import lddmm_transform_points
 
 """
 Test generate_position_field.
