@@ -65,7 +65,7 @@ def locally_rotate_velocity_fields(velocity_fields, resolution, blob_center, blo
     velocity_fields = _validate_ndarray(velocity_fields, required_ndim=3+2)
     blob_center = _validate_scalar_to_multi(blob_center, velocity_fields.ndim - 2)
     blob_width = _validate_scalar_to_multi(blob_width, velocity_fields.ndim - 2)
-    rotation_angles = _validate_scalar_to_multi(rotation_angles, velocity_fields.ndim - 2) * np.pi / 180
+    rotation_angles = _validate_scalar_to_multi(rotation_angles, 1 if velocity_fields.ndim - 2 == 2 else 3) * np.pi / 180 # Only works for 2D and 3D.
     rotation_center = _validate_scalar_to_multi(rotation_center, velocity_fields.ndim - 2)
     
     # Construct and apply rotations.
@@ -75,23 +75,31 @@ def locally_rotate_velocity_fields(velocity_fields, resolution, blob_center, blo
     blob_weights = np.exp(-np.sum((identity_position_field - blob_center)**2 / (2 * blob_width**2), axis=-1))
 
     # Note: to make this function n-dimensional, define the rotation_matrix dynamically.
-    rotation_matrix = np.array([
-        [
-            [1, 0, 0],
-            [0, np.cos(rotation_angles[1]), -np.sin(rotation_angles[1])],
-            [0, np.sin(rotation_angles[1]), np.cos(rotation_angles[1])],
-        ],
-        [
-            [np.cos(rotation_angles[2]), 0, np.sin(rotation_angles[2])],
-            [0, 1, 0],
-            [-np.sin(rotation_angles[2]), 0, np.cos(rotation_angles[2])],
-        ],
-        [
-            [np.cos(rotation_angles[0]), -np.sin(rotation_angles[0]), 0],
-            [np.sin(rotation_angles[0]), np.cos(rotation_angles[0]), 0],
-            [0, 0, 1],
-        ],
-    ])
+    if spatial_ndim == 2:
+        rotation_matrix = np.array([
+            [np.cos(rotation_angles[0]), -np.sin(rotation_angles[0])],
+            [np.sin(rotation_angles[0]), np.cos(rotation_angles[0])],
+        ])
+    elif spatial_ndim == 3:
+        rotation_matrix = np.array([
+            [
+                [1, 0, 0],
+                [0, np.cos(rotation_angles[1]), -np.sin(rotation_angles[1])],
+                [0, np.sin(rotation_angles[1]), np.cos(rotation_angles[1])],
+            ],
+            [
+                [np.cos(rotation_angles[2]), 0, np.sin(rotation_angles[2])],
+                [0, 1, 0],
+                [-np.sin(rotation_angles[2]), 0, np.cos(rotation_angles[2])],
+            ],
+            [
+                [np.cos(rotation_angles[0]), -np.sin(rotation_angles[0]), 0],
+                [np.sin(rotation_angles[0]), np.cos(rotation_angles[0]), 0],
+                [0, 0, 1],
+            ],
+        ])
+    else:
+        raise NotImplementedError(f"locally_rotate_velocity_fields has only been implemented for 2D and 3D cases.")
     rotation_matrix = reduce(np.matmul, reversed(rotation_matrix))
 
     # rotation_displacements = (rotation_matrix @ ((identity_position_field - rotation_center).reshape(-1, spatial_ndim).T)).T.reshape(identity_position_field.shape) - (identity_position_field - rotation_center)
