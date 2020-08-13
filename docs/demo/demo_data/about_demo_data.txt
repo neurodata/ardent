@@ -1,3 +1,0 @@
-average_template_100.nrrd: The Allen Mouse Brain Atlas at 100 micrometer resolution.
-
-thy1eyfp_preprocessed_50um.tif: Brian Hsueh's mouse brain data with preprocessing that is not yet implemented in ARDENT.
