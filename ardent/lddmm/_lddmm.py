@@ -748,6 +748,7 @@ class _Lddmm:
         # Set scale of self.affine if appropriate.
         if self.fixed_affine_scale is not None:
             U, _, Vh = svd(self.affine[:-1, :-1])
+            # TODO: let fixed_affine_scale be per-dimension?
             self.affine[:-1, :-1] = U @ np.diag([self.fixed_affine_scale] * (len(self.affine) - 1)) @ Vh
         # If self.fixed_affine_scale was not provided (is None), project self.affine to a rigid affine if appropriate.
         elif iteration < self.num_rigid_affine_iterations:

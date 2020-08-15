@@ -9,6 +9,10 @@ from .bias_and_artifact_correction import remove_grid_artifact
 from .modify_velocity_fields import locally_rotate_velocity_fields
 from .modify_velocity_fields import locally_translate_velocity_fields
 
+from .sliced_data import affine_register
+from .sliced_data import apply_affine_to_image
+from .sliced_data import rigidly_align_slices
+
 
 # TODO: update preprocessing_functions, include resample.
 preprocessing_functions = [
