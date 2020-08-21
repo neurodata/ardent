@@ -358,7 +358,7 @@ def rigidly_align_slices(
                 template=slice[slice_index],
                 target=volume_neighbors[slice_index],
                 template_resolution=slice_resolutions[slice_index],
-                target_resolution=volume_slice_resolutions[slice_index]
+                target_resolution=volume_slice_resolutions[slice_index],
                 num_iterations=num_iterations_per_registration,
                 affine_stepsize=affine_stepsize,
                 fixed_scale=fixed_scale,
