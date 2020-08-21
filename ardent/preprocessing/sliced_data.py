@@ -29,20 +29,27 @@ from ..lddmm._lddmm_utilities import _compute_axes
 from ..lddmm._lddmm_utilities import _compute_coords
 
 
-def _slices_to_volume(slices):
+def _slices_to_volume(slices, slice_resolutions, affines):
     """
-    Resample slices into a volume with the largest size per dimension of all slices.
+    Resample slices into a volume with the largest real shape and smallest resolution 
+    per dimension of all slices. Each affine in affines is applied to its corresponding slice.
+
     slices are stacked on dimension 0.
     """
 
     slice_shapes = np.array(list(map(lambda slice_: slice_.shape, slices)))
-    maximum_slice_shape = np.max(slice_shapes, 0)
-    # slices are stacked on the last dimension in volume.
-    volume = np.empty((len(slices), *maximum_slice_shape), dtype=float)
-    for slice_index, slice_ in enumerate(slices):
-        volume[slice_index] = resize(slice_, maximum_slice_shape)
+    slice_real_shapes = slice_shapes * slice_resolutions
+    maximum_slice_real_shape = np.max(slice_real_shapes, 0)
+    minimum_slice_resolution = np.min(slice_resolutions, 0)
+    volume_slice_shape = np.ceil(maximum_slice_real_shape / minimum_slice_resolution)
+    volume_slice_resolutions = slice_real_shapes / volume_slice_shape
 
-    return volume
+    # slices are stacked on the last dimension in volume.
+    volume = np.empty((len(slices), *volume_slice_shape), dtype=float)
+    for slice_index, slice_ in enumerate(slices):
+        volume[slice_index] = resize(slice_, volume_slice_shape)
+
+    return volume, volume_slice_resolutions
 
 
 def _volume_to_neighbor_averages(volume, sigma_gaussian, clip_gaussian_at_z):
@@ -52,7 +59,7 @@ def _volume_to_neighbor_averages(volume, sigma_gaussian, clip_gaussian_at_z):
 
     kernel = np.arange(1, sigma_gaussian * clip_gaussian_at_z + 1)
     kernel = np.concatenate((kernel[::-1], [0], kernel))
-    kernel = np.exp(-kernel**2 / (2 * sigma_gaussian**2)) # / (sigma_gaussian * np.sqrt(2 * np.pi))
+    kernel = np.exp(-kernel**2 / (2 * sigma_gaussian**2))
     kernel[len(kernel) // 2] = 0
     kernel /= kernel.sum()
     kernel = kernel.reshape(*[1] * slice_ndim, -1)
@@ -106,11 +113,12 @@ def _compute_affine_inv_gradient(
     affine_inv_gradient = (
         affine_inv_template_gradient_broadcast
         * np.expand_dims(homogenous_target_coords, -2)
-        * (affine_inv_template - target)
+        * (affine_inv_template - target)[..., None, None]
     )
 
     # Note: before implementing Gauss Newton below, 
     # affine_inv_gradient_reduction, as defined below, 
+    # plus zero padding to make it shape (4,4),
     # is the 1st order solution for affine_inv_gradient.
     # For 3D case, this has shape (3,4).
     affine_inv_gradient_reduction = np.sum(affine_inv_gradient, tuple(range(target.ndim)))
@@ -156,6 +164,12 @@ def _update_affine_inv(affine_inv, affine_inv_gradient, affine_stepsize, fixed_s
 
     # Set scale of affine_inv if appropriate.
     if fixed_scale is not None:
+        # Take reciprocal of fixed_scale Since it is applied to affine_inv rather than affine.
+        fixed_scale = 1 / fixed_scale
+        # TODO: let fixed_affine_scale be per-dimension? 
+        # --> svd replaced by polar decomposition
+        # M = U * R, U = unitary, R = positive symmetric definite
+        # adjust R
         U, _, Vh = svd(affine_inv[:-1, :-1])
         affine_inv[:-1, :-1] = U @ np.diag([fixed_scale] * (len(affine_inv) - 1)) @ Vh
     # If fixed_scale was not provided (is None), project affine_inv to a rigid affine if rigid.
@@ -211,7 +225,7 @@ def affine_register(
     target,
     template_resolution,
     target_resolution,
-    num_iterations,
+    num_iterations=100,
     affine_stepsize=0.3,
     fixed_scale=None,
     rigid=False,
@@ -227,7 +241,7 @@ def affine_register(
 
         target_resolution (float, seq): The per-dimension resolution of target. 
 
-        num_iterations (int): The number of iterations of registration to perform.
+        num_iterations (int, optional): The number of iterations of registration to perform. Defaults to 100.
         affine_stepsize (float, optional): The Gauss-Newton stepsize in units of voxels. This should be between 0 and 1. Defaults to 0.3.
         fixed_scale (float, seq, optional): If provided, this fixes the scale of the affine and constrains it to be rigid. Defaults to None.
         rigid (bool, optional): If True, the affine is constrained to be rigid. Defaults to False.
@@ -290,13 +304,20 @@ def rigidly_align_slices(
     num_iterations,
     sigma_gaussian,
     clip_gaussian_at_z=3,
+    # affine_register kwargs.
+    num_iterations_per_registration=100,
+    affine_stepsize=0.3,
+    fixed_scale=None,
+    rigid=False,
+    initial_affine=None,
 ):
 
     # Validate inputs.
-
     slices = list(slices)
     slice_ndim = np.array(slices[0]).ndim
     for slice_index, slice_ in enumerate(slices):
+        # Intended side-effect: this creates a copy of each element in slices,
+        # so changing these does not mutate objects passed into slices.
         slices[slice_index] = _validate_ndarray(slice_, required_ndim=slice_ndim)
     try:
         slice_resolutions = list(slice_resolutions)
@@ -309,25 +330,51 @@ def rigidly_align_slices(
         slice_resolutions = np.tile(slice_resolutions, [len(slices), 1])
     slice_resolutions = _validate_ndarray(slice_resolutions, minimum_ndim=2, required_shape=(len(slices), slice_ndim))
     num_iterations = int(num_iterations)
+    num_iterations_per_registration = int(num_iterations_per_registration)
     sigma_gaussian = int(sigma_gaussian)
     clip_gaussian_at_z = int(clip_gaussian_at_z)
+    affine_stepsize = float(affine_stepsize)
 
-    # Resample slices into a volume with the largest size per dimension of all slices.
-    volume = _slices_to_volume(slices)
-    volume_resolutions
+    # Initialize affines to identity.
+    affines = np.repeat(np.eye(slice_ndim + 1)[None], len(slices), 0)
 
-    # Create a parallel volume whose slices are weighted averages of their neighbors in volume.
-    volume_neighbors = _volume_to_neighbor_averages(volume, sigma_gaussian, clip_gaussian_at_z)
+    # Iteratively register slices.
+    for iteration in range(num_iterations):
 
-    # Rigidly register each slice in volume to its corresponding slice in volume_neighbors.
-    for slice_index in range(len(slices)):
-        
-        affine = affine_register(
-            template=volume[slice_index],
-            target=volume_neighbors[slice_index],
-            num_iterations=num_iterations,
-        )
+        # Resample slices into a volume
+        # with the largest real shape per dimension of all slices,
+        # and at least the finest resolution per dimension of all slices.
+        volume, volume_slice_resolutions = _slices_to_volume(slices, slice_resolutions, affines)
 
-        volume[slice_index] = apply_affine_to_image(volume[slice_index], RESOLUTION, affine)
+        # Create a parallel volume whose slices are weighted averages of their neighbors in volume.
+        volume_neighbors = _volume_to_neighbor_averages(volume, sigma_gaussian, clip_gaussian_at_z)
+        # Note: slices in volume_neighbors have the same resolutions as volume, i.e. volume_slice_resolutions.
 
-    return volume
+        # Rigidly register each slice to its corresponding slice in volume_neighbors.
+        for slice_index in range(len(slices)):
+            
+            # Compute affine between this slice and its convolved neighbors.
+            affine = affine_register(
+                template=slice[slice_index],
+                target=volume_neighbors[slice_index],
+                template_resolution=slice_resolutions[slice_index],
+                target_resolution=volume_slice_resolutions[slice_index]
+                num_iterations=num_iterations_per_registration,
+                affine_stepsize=affine_stepsize,
+                fixed_scale=fixed_scale,
+                rigid=rigid,
+                initial_affine=affines[slice_index],
+            )
+
+            # Update this slice with the computed affine.
+            slices[slice_index] = apply_affine_to_image(
+                image=slices[slice_index],
+                resolution=slice_resolutions[slice_index],
+                affine=affine,
+            )
+
+            # Update affines with the computed affine.
+            affines[slice_index] = affine
+
+    # Note: slices is a list of modified copies of the original input contents.
+    return slices
