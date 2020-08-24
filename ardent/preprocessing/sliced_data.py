@@ -28,6 +28,56 @@ from ..lddmm._lddmm_utilities import _compute_axes
 from ..lddmm._lddmm_utilities import _compute_coords
 
 
+def apply_affine_to_image(image, image_resolution, affine, output_shape=None, output_resolution=None):
+    """
+    Interpolates image at its centered identity coordinates multiplied by inv(affine).
+    A copy of image so interpolated is returned.
+
+    Args:
+        image (ndarray): The image to be modified.
+        image_resolution (float, seq): The per-dimension resolution of image. If provided as a scalar, 
+            that scalar is interpreted as the resolution at every dimension.
+        affine (ndarray): The affine array in homogenous coordinates to be applied to image.
+        output_shape (seq, optional): The shape to interpolate image at.
+            If None, image.shape is used. Defaults to None.
+        output_resolution (float, seq, optional): The resolution to interpolate the image at.
+            If None, the image_resolution is used. Defaults to None.
+
+    Returns:
+        ndarray: A copy of image with affine applied to it.
+    """
+
+    # Validate inputs.
+    image = _validate_ndarray(image, dtype=float)
+    image_resolution = _validate_resolution(image_resolution, image.ndim)
+    affine = _validate_ndarray(affine, required_shape=(image.ndim + 1, image.ndim + 1))
+    if output_shape is None:
+        output_shape = np.array(image.shape)
+    output_shape = _validate_ndarray(output_shape, required_shape=image.ndim)
+    if output_resolution is None:
+        output_resolution = np.copy(image_resolution)
+    output_resolution = _validate_resolution(output_resolution, image.ndim)
+
+    affine_inv = inv(affine)
+
+    image_axes = _compute_axes(image.shape, image_resolution, origin='center')
+    output_coords = _compute_coords(output_shape, output_resolution, origin='center')
+    
+    # Apply affine_inv to image_coords by multiplication.
+    affine_inv_output_coords = _multiply_coords_by_affine(affine_inv, output_coords)
+
+    # Apply affine_inv_coords to image.
+    affine_inv_image = interpn(
+        points=image_axes,
+        values=image,
+        xi=affine_inv_output_coords,
+        bounds_error=False,
+        fill_value=None,
+    )
+
+    return affine_inv_image
+
+
 def _slices_to_volume(slices, slice_resolutions, affines):
     """
     Resample slices into a volume with the largest real shape
@@ -126,12 +176,11 @@ def _compute_affine_inv_gradient(
         * np.expand_dims(homogenous_target_coords, -2)
     )
 
-    # Note: before implementing Gauss Newton below, 
-    # affine_inv_gradient_reduction, as defined below, 
-    # plus zero padding to make it shape (4,4) for a 3D case,
-    # is the 1st order solution for affine_inv_gradient.
+    # Note: affine_inv_gradient_reduction contains the error term, affine_inv_gradient_spatial does not.
+
     # For 3D case, this has shape (3,4).
-    affine_inv_gradient_reduction = affine_inv_gradient * (affine_inv_template - target)[..., None, None]
+    error = affine_inv_template - target
+    affine_inv_gradient_reduction = affine_inv_gradient_spatial * error[..., None, None]
     affine_inv_gradient_reduction = np.sum(affine_inv_gradient_reduction, tuple(range(target.ndim)))
     if skip_gauss_newton:
         # Append a row of zeros at the end of the 0th dimension.
@@ -194,56 +243,6 @@ def _update_affine_inv(affine_inv, affine_inv_gradient, affine_stepsize, fixed_s
         affine_inv[:-1, :-1] = U @ Vh
 
     return affine_inv
-
-
-def apply_affine_to_image(image, image_resolution, affine, output_shape=None, output_resolution=None):
-    """
-    Interpolates image at its centered identity coordinates multiplied by inv(affine).
-    A copy of image so interpolated is returned.
-
-    Args:
-        image (ndarray): The image to be modified.
-        image_resolution (float, seq): The per-dimension resolution of image. If provided as a scalar, 
-            that scalar is interpreted as the resolution at every dimension.
-        affine (ndarray): The affine array in homogenous coordinates to be applied to image.
-        output_shape (seq, optional): The shape to interpolate image at.
-            If None, image.shape is used. Defaults to None.
-        output_resolution (float, seq, optional): The resolution to interpolate the image at.
-            If None, the image_resolution is used. Defaults to None.
-
-    Returns:
-        ndarray: A copy of image with affine applied to it.
-    """
-
-    # Validate inputs.
-    image = _validate_ndarray(image, dtype=float)
-    image_resolution = _validate_resolution(image_resolution, image.ndim)
-    affine = _validate_ndarray(affine, required_shape=(image.ndim + 1, image.ndim + 1))
-    if output_shape is None:
-        output_shape = np.array(image.shape)
-    output_shape = _validate_ndarray(output_shape, required_shape=image.ndim)
-    if output_resolution is None:
-        output_resolution = np.copy(image_resolution)
-    output_resolution = _validate_resolution(output_resolution, image.ndim)
-
-    affine_inv = inv(affine)
-
-    image_axes = _compute_axes(image.shape, image_resolution, origin='center')
-    output_coords = _compute_coords(output_shape, output_resolution, origin='center')
-    
-    # Apply affine_inv to image_coords by multiplication.
-    affine_inv_output_coords = _multiply_coords_by_affine(affine_inv, output_coords)
-
-    # Apply affine_inv_coords to image.
-    affine_inv_image = interpn(
-        points=image_axes,
-        values=image,
-        xi=affine_inv_output_coords,
-        bounds_error=False,
-        fill_value=None,
-    )
-
-    return affine_inv_image
 
 
 def affine_register(
