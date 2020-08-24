@@ -16,7 +16,6 @@ https://github.com/mitragithub/Registration/blob/master/atlas_free_rigid_alignme
 '''
 
 import numpy as np
-from skimage.transform import resize
 from scipy.interpolate import interpn
 from scipy.linalg import inv, solve, svd
 from scipy.signal import fftconvolve
@@ -31,7 +30,8 @@ from ..lddmm._lddmm_utilities import _compute_coords
 
 def _slices_to_volume(slices, slice_resolutions, affines):
     """
-    Resample slices into a volume with the largest real shape and smallest resolution 
+    Resample slices into a volume with the largest real shape
+    (physical length, i.e. number of voxels times voxel size) and smallest resolution 
     per dimension of all slices. Each affine in affines is applied to its corresponding slice.
 
     slices are stacked on dimension 0.
@@ -47,7 +47,13 @@ def _slices_to_volume(slices, slice_resolutions, affines):
     # slices are stacked on the last dimension in volume.
     volume = np.empty((len(slices), *volume_slice_shape), dtype=float)
     for slice_index, slice_ in enumerate(slices):
-        volume[slice_index] = resize(slice_, volume_slice_shape)
+        volume[slice_index] = apply_affine_to_image(
+            image=slice_,
+            image_resolution=slice_resolutions[slice_index],
+            affine=affines[slice_index],
+            output_shape=volume_slice_shape,
+            output_resolution=volume_slice_resolutions[slice_index],
+        )
 
     return volume, volume_slice_resolutions
 
@@ -59,13 +65,15 @@ def _volume_to_neighbor_averages(volume, sigma_gaussian, clip_gaussian_at_z):
 
     slice_ndim = volume[0].ndim
 
-    kernel = np.arange(1, sigma_gaussian * clip_gaussian_at_z + 1)
+    kernel = np.arange(1, int(sigma_gaussian * clip_gaussian_at_z + 1))
     kernel = np.concatenate((kernel[::-1], [0], kernel))
     kernel = np.exp(-kernel**2 / (2 * sigma_gaussian**2))
     kernel[len(kernel) // 2] = 0
     kernel /= kernel.sum()
     kernel = kernel.reshape(-1, *[1] * (volume.ndim - 1))
-    volume_neighbors = fftconvolve(volume, kernel, axes=0)
+    pad_width = [[len(kernel) // 2, len(kernel) // 2], *[[0, 0] for _ in range(volume.ndim - 1)]
+    volume_neighbors = np.pad(volume_neighbors, pad_width, mode='reflect')
+    volume_neighbors = fftconvolve(volume, kernel, mode='valid', axes=0)
 
     return volume_neighbors
 
@@ -116,7 +124,6 @@ def _compute_affine_inv_gradient(
     affine_inv_gradient_spatial = (
         affine_inv_template_gradient_broadcast
         * np.expand_dims(homogenous_target_coords, -2)
-        * (affine_inv_template - target)[..., None, None]
     )
 
     # Note: before implementing Gauss Newton below, 
@@ -124,7 +131,8 @@ def _compute_affine_inv_gradient(
     # plus zero padding to make it shape (4,4) for a 3D case,
     # is the 1st order solution for affine_inv_gradient.
     # For 3D case, this has shape (3,4).
-    affine_inv_gradient_reduction = np.sum(affine_inv_gradient, tuple(range(target.ndim)))
+    affine_inv_gradient_reduction = affine_inv_gradient * (affine_inv_template - target)[..., None, None]
+    affine_inv_gradient_reduction = np.sum(affine_inv_gradient_reduction, tuple(range(target.ndim)))
     if skip_gauss_newton:
         # Append a row of zeros at the end of the 0th dimension.
         zeros = np.zeros((1, target.ndim + 1))
@@ -334,7 +342,7 @@ def rigidly_align_slices(
     sigma_gaussian,
     clip_gaussian_at_z=3,
     # affine_register kwargs.
-    num_iterations_per_registration=100,
+    num_iterations_per_registration=1,
     affine_stepsize=0.3,
     fixed_scale=None,
     rigid=False,
@@ -346,8 +354,6 @@ def rigidly_align_slices(
     slices = list(slices)
     slice_ndim = np.array(slices[0]).ndim
     for slice_index, slice_ in enumerate(slices):
-        # Intended side-effect: this creates a copy of each element in slices,
-        # so changing these does not mutate objects passed into slices.
         slices[slice_index] = _validate_ndarray(slice_, required_ndim=slice_ndim)
     try:
         slice_resolutions = list(slice_resolutions)
@@ -361,8 +367,8 @@ def rigidly_align_slices(
     slice_resolutions = _validate_ndarray(slice_resolutions, minimum_ndim=2, required_shape=(len(slices), slice_ndim))
     num_iterations = int(num_iterations)
     num_iterations_per_registration = int(num_iterations_per_registration)
-    sigma_gaussian = int(sigma_gaussian)
-    clip_gaussian_at_z = int(clip_gaussian_at_z)
+    sigma_gaussian = float(sigma_gaussian)
+    clip_gaussian_at_z = float(clip_gaussian_at_z)
     affine_stepsize = float(affine_stepsize)
 
     # Initialize affines to identity.
@@ -395,13 +401,6 @@ def rigidly_align_slices(
                 rigid=rigid,
                 initial_affine=affines[slice_index],
                 skip_gauss_newton=skip_gauss_newton,
-            )
-
-            # Update this slice with the computed affine.
-            slices[slice_index] = apply_affine_to_image(
-                image=slices[slice_index],
-                image_resolution=slice_resolutions[slice_index],
-                affine=affine,
             )
 
             # Update affines with the computed affine.
