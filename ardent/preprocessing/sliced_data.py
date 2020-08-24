@@ -41,7 +41,7 @@ def _slices_to_volume(slices, slice_resolutions, affines):
     slice_real_shapes = slice_shapes * slice_resolutions
     maximum_slice_real_shape = np.max(slice_real_shapes, 0)
     minimum_slice_resolution = np.min(slice_resolutions, 0)
-    volume_slice_shape = np.ceil(maximum_slice_real_shape / minimum_slice_resolution)
+    volume_slice_shape = np.ceil(maximum_slice_real_shape / minimum_slice_resolution).astype(int)
     volume_slice_resolutions = slice_real_shapes / volume_slice_shape
 
     # slices are stacked on the last dimension in volume.
@@ -57,12 +57,14 @@ def _volume_to_neighbor_averages(volume, sigma_gaussian, clip_gaussian_at_z):
     Create a parallel volume whose slices are weighted averages of their neighbors in volume.
     """
 
+    slice_ndim = volume[0].ndim
+
     kernel = np.arange(1, sigma_gaussian * clip_gaussian_at_z + 1)
     kernel = np.concatenate((kernel[::-1], [0], kernel))
     kernel = np.exp(-kernel**2 / (2 * sigma_gaussian**2))
     kernel[len(kernel) // 2] = 0
     kernel /= kernel.sum()
-    kernel = kernel.reshape(*[1] * slice_ndim, -1)
+    kernel = kernel.reshape(-1, *[1] * (volume.ndim - 1))
     volume_neighbors = fftconvolve(volume, kernel, axes=0)
 
     return volume_neighbors
@@ -75,6 +77,7 @@ def _compute_affine_inv_gradient(
     target_resolution,
     affine_inv,
     affine_inv_template,
+    skip_gauss_newton=True,
     ):
     """
     Compute and return the appropriate gradient for affine_inv to follow using Gauss-Newton.
@@ -110,7 +113,7 @@ def _compute_affine_inv_gradient(
     # homogenous_target_coords has shape (x,y,z,4).
     # To repeat homogenous_target_coords along the 2nd-last dimension of affine_inv_template_gradient_broadcast, 
     # we reshape homogenous_target_coords from shape (x,y,z,4) to shape (x,y,z,1,4) and let that broadcast to shape (x,y,z,3,4).
-    affine_inv_gradient = (
+    affine_inv_gradient_spatial = (
         affine_inv_template_gradient_broadcast
         * np.expand_dims(homogenous_target_coords, -2)
         * (affine_inv_template - target)[..., None, None]
@@ -118,21 +121,26 @@ def _compute_affine_inv_gradient(
 
     # Note: before implementing Gauss Newton below, 
     # affine_inv_gradient_reduction, as defined below, 
-    # plus zero padding to make it shape (4,4),
+    # plus zero padding to make it shape (4,4) for a 3D case,
     # is the 1st order solution for affine_inv_gradient.
     # For 3D case, this has shape (3,4).
     affine_inv_gradient_reduction = np.sum(affine_inv_gradient, tuple(range(target.ndim)))
+    if skip_gauss_newton:
+        # Append a row of zeros at the end of the 0th dimension.
+        zeros = np.zeros((1, target.ndim + 1))
+        affine_inv_gradient = np.concatenate((affine_inv_gradient_reduction, zeros), 0)
+        return affine_inv_gradient
 
     # Apply Gauss-Newton for 2nd order solution.
 
     # Reshape to a single vector. For a 3D case this becomes shape (12,).
     affine_inv_gradient_reduction = affine_inv_gradient_reduction.ravel()
 
-    # For a 3D case, affine_inv_gradient has shape (x,y,z,3,4).
-    # For a 3D case, affine_inv_hessian_approx is affine_inv_gradient reshaped to shape (x,y,z,12,1), 
+    # For a 3D case, affine_inv_gradient_spatial has shape (x,y,z,3,4).
+    # For a 3D case, affine_inv_hessian_approx is affine_inv_gradient_spatial reshaped to shape (x,y,z,12,1), 
     # then matrix multiplied by itself transposed on the last two dimensions, then summed over the spatial dimensions
     # to resultant shape (12,12).
-    affine_inv_hessian_approx = affine_inv_gradient.reshape(*affine_inv_gradient.shape[:-2], -1, 1)
+    affine_inv_hessian_approx = affine_inv_gradient_spatial.reshape(*affine_inv_gradient_spatial.shape[:-2], -1, 1)
     affine_inv_hessian_approx_tail_transpose = affine_inv_hessian_approx.reshape(*affine_inv_hessian_approx.shape[:-2], 1, -1)
     affine_inv_hessian_approx = affine_inv_hessian_approx @ affine_inv_hessian_approx_tail_transpose
     affine_inv_hessian_approx = np.sum(affine_inv_hessian_approx, tuple(range(target.ndim)))
@@ -180,16 +188,20 @@ def _update_affine_inv(affine_inv, affine_inv_gradient, affine_stepsize, fixed_s
     return affine_inv
 
 
-def apply_affine_to_image(image, resolution, affine):
+def apply_affine_to_image(image, image_resolution, affine, output_shape=None, output_resolution=None):
     """
     Interpolates image at its centered identity coordinates multiplied by inv(affine).
     A copy of image so interpolated is returned.
 
     Args:
         image (ndarray): The image to be modified.
-        resolution (float, seq): The per-dimension resolution of image. If provided as a scalar, 
+        image_resolution (float, seq): The per-dimension resolution of image. If provided as a scalar, 
             that scalar is interpreted as the resolution at every dimension.
         affine (ndarray): The affine array in homogenous coordinates to be applied to image.
+        output_shape (seq, optional): The shape to interpolate image at.
+            If None, image.shape is used. Defaults to None.
+        output_resolution (float, seq, optional): The resolution to interpolate the image at.
+            If None, the image_resolution is used. Defaults to None.
 
     Returns:
         ndarray: A copy of image with affine applied to it.
@@ -197,22 +209,28 @@ def apply_affine_to_image(image, resolution, affine):
 
     # Validate inputs.
     image = _validate_ndarray(image, dtype=float)
-    resolution = _validate_resolution(resolution, image.ndim)
+    image_resolution = _validate_resolution(image_resolution, image.ndim)
     affine = _validate_ndarray(affine, required_shape=(image.ndim + 1, image.ndim + 1))
+    if output_shape is None:
+        output_shape = np.array(image.shape)
+    output_shape = _validate_ndarray(output_shape, required_shape=image.ndim)
+    if output_resolution is None:
+        output_resolution = np.copy(image_resolution)
+    output_resolution = _validate_resolution(output_resolution, image.ndim)
 
     affine_inv = inv(affine)
 
-    image_axes = _compute_coords(image, resolution, origin='center')
-    image_coords = _compute_coords(image, resolution, origin='center')
+    image_axes = _compute_axes(image.shape, image_resolution, origin='center')
+    output_coords = _compute_coords(output_shape, output_resolution, origin='center')
     
     # Apply affine_inv to image_coords by multiplication.
-    affine_inv_coords = _multiply_coords_by_affine(affine_inv, image_coords)
+    affine_inv_output_coords = _multiply_coords_by_affine(affine_inv, output_coords)
 
     # Apply affine_inv_coords to image.
     affine_inv_image = interpn(
         points=image_axes,
-        values=image_coords,
-        xi=affine_inv_coords,
+        values=image,
+        xi=affine_inv_output_coords,
         bounds_error=False,
         fill_value=None,
     )
@@ -230,6 +248,7 @@ def affine_register(
     fixed_scale=None,
     rigid=False,
     initial_affine=None,
+    skip_gauss_newton=False,
 ):
     """
     Iteratively compute an affine that aligns template and target.
@@ -246,6 +265,8 @@ def affine_register(
         fixed_scale (float, seq, optional): If provided, this fixes the scale of the affine and constrains it to be rigid. Defaults to None.
         rigid (bool, optional): If True, the affine is constrained to be rigid. Defaults to False.
         initial_affine (ndarray, optional): An optional initial guess of the affine that will transform template to align with target. Defaults to None.
+        skip_gauss_newton (bool, optional): If True, the 2nd-order gauss-newton optimization is skipped.
+            If True the appropriate value for affine_stepsize will change. Defaults to False.
 
     Returns:
         ndarray: The resultant affine that aligns template to target.
@@ -258,18 +279,28 @@ def affine_register(
     target_resolution = _validate_resolution(target_resolution, target.ndim, dtype=float)
     num_iterations = int(num_iterations)
     affine_stepsize = float(affine_stepsize)
-    fixed_scale = _validate_scalar_to_multi(fixed_scale, template.ndim, dtype=float)
+    if fixed_scale is not None:
+        fixed_scale = _validate_scalar_to_multi(fixed_scale, template.ndim, dtype=float)
     if initial_affine is None:
         initial_affine = np.eye(template.ndim + 1)
     else:
         initial_affine = _validate_ndarray(initial_affine, required_shape=(template.ndim + 1, template.ndim + 1))
+    skip_gauss_newton = bool(skip_gauss_newton)
 
     # Initialize values.
     affine_inv = inv(initial_affine)
-    affine_inv_template = apply_affine_to_image(template, template_resolution, initial_affine)
 
     # Iteratively optimize affine_inv.
     for iteration in range(num_iterations):
+
+        # Apply affine_inv to template.
+        affine_inv_template = apply_affine_to_image(
+            image=template,
+            image_resolution=template_resolution,
+            affine=inv(affine_inv),
+            output_shape=target.shape,
+            output_resolution=target_resolution,
+        )
 
         # Compute affine_inv_gradient.
         affine_inv_gradient = _compute_affine_inv_gradient(
@@ -279,6 +310,7 @@ def affine_register(
             target_resolution=target_resolution,
             affine_inv=affine_inv,
             affine_inv_template=affine_inv_template,
+            skip_gauss_newton=skip_gauss_newton,
         )
 
         # Update affine_inv.
@@ -289,11 +321,8 @@ def affine_register(
             fixed_scale=fixed_scale,
             rigid=rigid,
         )
-
-        # Apply affine_inv to template.
-        affine_inv_template = apply_affine_to_image(template, template_resolution, inv(affine_inv))
     
-    affine = inv(affine)
+    affine = inv(affine_inv)
 
     return affine
 
@@ -310,6 +339,7 @@ def rigidly_align_slices(
     fixed_scale=None,
     rigid=False,
     initial_affine=None,
+    skip_gauss_newton=False,
 ):
 
     # Validate inputs.
@@ -355,7 +385,7 @@ def rigidly_align_slices(
             
             # Compute affine between this slice and its convolved neighbors.
             affine = affine_register(
-                template=slice[slice_index],
+                template=slices[slice_index],
                 target=volume_neighbors[slice_index],
                 template_resolution=slice_resolutions[slice_index],
                 target_resolution=volume_slice_resolutions[slice_index],
@@ -364,12 +394,13 @@ def rigidly_align_slices(
                 fixed_scale=fixed_scale,
                 rigid=rigid,
                 initial_affine=affines[slice_index],
+                skip_gauss_newton=skip_gauss_newton,
             )
 
             # Update this slice with the computed affine.
             slices[slice_index] = apply_affine_to_image(
                 image=slices[slice_index],
-                resolution=slice_resolutions[slice_index],
+                image_resolution=slice_resolutions[slice_index],
                 affine=affine,
             )
 
