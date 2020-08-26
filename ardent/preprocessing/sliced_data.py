@@ -92,7 +92,7 @@ def _slices_to_volume(slices, slice_resolutions, affines):
     maximum_slice_real_shape = np.max(slice_real_shapes, 0)
     minimum_slice_resolution = np.min(slice_resolutions, 0)
     volume_slice_shape = np.ceil(maximum_slice_real_shape / minimum_slice_resolution).astype(int)
-    volume_slice_resolutions = slice_real_shapes / volume_slice_shape
+    volume_slice_resolution = maximum_slice_real_shape / volume_slice_shape
 
     # slices are stacked on the last dimension in volume.
     volume = np.empty((len(slices), *volume_slice_shape), dtype=float)
@@ -102,10 +102,10 @@ def _slices_to_volume(slices, slice_resolutions, affines):
             image_resolution=slice_resolutions[slice_index],
             affine=affines[slice_index],
             output_shape=volume_slice_shape,
-            output_resolution=volume_slice_resolutions[slice_index],
+            output_resolution=volume_slice_resolution,
         )
 
-    return volume, volume_slice_resolutions
+    return volume, volume_slice_resolution
 
 
 def _volume_to_neighbor_averages(volume, sigma_gaussian, clip_gaussian_at_z):
@@ -121,9 +121,9 @@ def _volume_to_neighbor_averages(volume, sigma_gaussian, clip_gaussian_at_z):
     kernel[len(kernel) // 2] = 0
     kernel /= kernel.sum()
     kernel = kernel.reshape(-1, *[1] * (volume.ndim - 1))
-    pad_width = [[len(kernel) // 2, len(kernel) // 2], *[[0, 0] for _ in range(volume.ndim - 1)]
-    volume_neighbors = np.pad(volume_neighbors, pad_width, mode='reflect')
-    volume_neighbors = fftconvolve(volume, kernel, mode='valid', axes=0)
+    pad_width = [[len(kernel) // 2] * 2, *[[0, 0] for _ in range(volume.ndim - 1)]]
+    volume_neighbors = np.pad(volume, pad_width, mode='reflect')
+    volume_neighbors = fftconvolve(volume_neighbors, kernel, mode='valid', axes=0)
 
     return volume_neighbors
 
@@ -178,7 +178,7 @@ def _compute_affine_inv_gradient(
 
     # Note: affine_inv_gradient_reduction contains the error term, affine_inv_gradient_spatial does not.
 
-    # For 3D case, this has shape (3,4).
+    # For a 3D case, affine_inv_gradient_reduction has shape (3,4).
     error = affine_inv_template - target
     affine_inv_gradient_reduction = affine_inv_gradient_spatial * error[..., None, None]
     affine_inv_gradient_reduction = np.sum(affine_inv_gradient_reduction, tuple(range(target.ndim)))
@@ -204,7 +204,7 @@ def _compute_affine_inv_gradient(
 
     # Solve for affine_inv_gradient.
     try:
-        affine_inv_gradient = solve(affine_inv_hessian_approx, affine_inv_gradient_reduction, assume_a='pos').reshape(affine_inv_gradient.shape[-2:])
+        affine_inv_gradient = solve(affine_inv_hessian_approx, affine_inv_gradient_reduction, assume_a='pos').reshape(affine_inv_gradient_spatial.shape[-2:])
     except np.linalg.LinAlgError as exception:
         raise RuntimeError(
             "The Hessian was not invertible in the Gauss-Newton computation of affine_inv_gradient. "
@@ -219,25 +219,25 @@ def _compute_affine_inv_gradient(
     return affine_inv_gradient
 
 
-def _update_affine_inv(affine_inv, affine_inv_gradient, affine_stepsize, fixed_scale=None, rigid=False):
+def _update_affine_inv(affine_inv, affine_inv_gradient, affine_stepsize, fixed_affine_scale=None, rigid=False):
     """
-    Apply affine_inv_gradient to affine_inv, possibly adjusting for fixed_scale or rigid if specified.
-    Being redundant with one another, fixed_scale overrides rigid.
+    Apply affine_inv_gradient to affine_inv, possibly adjusting for fixed_affine_scale or rigid if specified.
+    Being redundant with one another, fixed_affine_scale overrides rigid.
     """
 
     affine_inv -= affine_inv_gradient * affine_stepsize
 
     # Set scale of affine_inv if appropriate.
-    if fixed_scale is not None:
-        # Take reciprocal of fixed_scale Since it is applied to affine_inv rather than affine.
-        fixed_scale = 1 / fixed_scale
+    if fixed_affine_scale is not None:
+        # Take reciprocal of fixed_affine_scale Since it is applied to affine_inv rather than affine.
+        fixed_affine_scale = 1 / fixed_affine_scale
         # TODO: let fixed_affine_scale be per-dimension? 
         # --> svd replaced by polar decomposition
         # M = U * R, U = unitary, R = positive symmetric definite
         # adjust R
         U, _, Vh = svd(affine_inv[:-1, :-1])
-        affine_inv[:-1, :-1] = U @ np.diag([fixed_scale] * (len(affine_inv) - 1)) @ Vh
-    # If fixed_scale was not provided (is None), project affine_inv to a rigid affine if rigid.
+        affine_inv[:-1, :-1] = U @ np.diag([fixed_affine_scale] * (len(affine_inv) - 1)) @ Vh
+    # If fixed_affine_scale was not provided (is None), project affine_inv to a rigid affine if rigid.
     elif rigid:
         U, _, Vh = svd(affine_inv[:-1, :-1])
         affine_inv[:-1, :-1] = U @ Vh
@@ -252,7 +252,7 @@ def affine_register(
     target_resolution,
     num_iterations=100,
     affine_stepsize=0.3,
-    fixed_scale=None,
+    fixed_affine_scale=None,
     rigid=False,
     initial_affine=None,
     skip_gauss_newton=False,
@@ -269,7 +269,7 @@ def affine_register(
 
         num_iterations (int, optional): The number of iterations of registration to perform. Defaults to 100.
         affine_stepsize (float, optional): The Gauss-Newton stepsize in units of voxels. This should be between 0 and 1. Defaults to 0.3.
-        fixed_scale (float, seq, optional): If provided, this fixes the scale of the affine and constrains it to be rigid. Defaults to None.
+        fixed_affine_scale (float, seq, optional): If provided, this fixes the scale of the affine and constrains it to be rigid. Defaults to None.
         rigid (bool, optional): If True, the affine is constrained to be rigid. Defaults to False.
         initial_affine (ndarray, optional): An optional initial guess of the affine that will transform template to align with target. Defaults to None.
         skip_gauss_newton (bool, optional): If True, the 2nd-order gauss-newton optimization is skipped.
@@ -286,8 +286,8 @@ def affine_register(
     target_resolution = _validate_resolution(target_resolution, target.ndim, dtype=float)
     num_iterations = int(num_iterations)
     affine_stepsize = float(affine_stepsize)
-    if fixed_scale is not None:
-        fixed_scale = _validate_scalar_to_multi(fixed_scale, template.ndim, dtype=float)
+    if fixed_affine_scale is not None:
+        fixed_affine_scale = _validate_scalar_to_multi(fixed_affine_scale, template.ndim, dtype=float)
     if initial_affine is None:
         initial_affine = np.eye(template.ndim + 1)
     else:
@@ -325,7 +325,7 @@ def affine_register(
             affine_inv=affine_inv,
             affine_inv_gradient=affine_inv_gradient,
             affine_stepsize=affine_stepsize,
-            fixed_scale=fixed_scale,
+            fixed_affine_scale=fixed_affine_scale,
             rigid=rigid,
         )
     
@@ -334,7 +334,7 @@ def affine_register(
     return affine
 
 
-def rigidly_align_slices(
+def affine_align_slices_to_volume(
     slices,
     slice_resolutions,
     num_iterations,
@@ -343,17 +343,51 @@ def rigidly_align_slices(
     # affine_register kwargs.
     num_iterations_per_registration=1,
     affine_stepsize=0.3,
-    fixed_scale=None,
-    rigid=False,
-    initial_affine=None,
+    fixed_affine_scale=None,
+    rigid=True,
+    initial_affines=None,
     skip_gauss_newton=False,
+    # Output specifiers.
+    return_slice_resolution=False,
+    return_affines=False,
 ):
+    """
+    Compute an affine registration between each slice and a weighted average of its neighboring slices 
+    and apply it to each slice, resampled into a volume.
+
+    Args:
+        slices (seq): A sequence of arrays, all of the same dimensionality, each of which is considered a slice to align.
+        slice_resolutions (float, seq): The resolution per dimension of each slice. 
+            If provided as a scalar, it is interpreted as the isotropic resolution of all slices.
+        num_iterations (int): The number of iterations of registering each slice to its neighbors.
+        sigma_gaussian (float): The standard deviation of the gaussian weighting of neighboring slices in units of slices.
+        clip_gaussian_at_z (float, optional): The number of standard deviations worth of neighboring slices to include around each slice. Defaults to 3.
+        num_iterations_per_registration (int, optional): The number of registration iterations to use for each registration of each slice. Defaults to 1.
+        affine_stepsize (float, optional): The unitless stepsize for affine adjustments. 
+            Unless skip_gauss_newton == True, this should be between 0 and 1. Defaults to 0.3.
+        fixed_affine_scale (float, optional): The scale to impose on the affine at all iterations. If None, no scale is imposed. 
+            Otherwise, this has the effect of making the affine always rigid. Defaults to None.
+        rigid (bool, optional): If True, all computed affines are projected onto a rigid affine. Redundant with fixed_affine_scale. Defaults to True.
+        initial_affines (seq, optional): An initial guess to the affine applied to each slice. 
+            If a single array is provided, it is used to initialize all affines. If None, identity is used. Defaults to None.
+        skip_gauss_newton (bool, optional): If True, the 2nd order optimization of the affine registration is skipped over, 
+            using only the 1st order solution. This changes the appropriate value, and range of plausible values, for affine_stepsize. Defaults to False.
+        return_slice_resolution (bool, optional): If True, a tuple is returned whose 2nd element is the resolution of each slice in the volume. Defaults to False.
+        return_affines (bool, optional): If True, a tuple is returned whose last element is the affines used to align slices. Defaults to False.
+
+    Returns:
+        ndarray, tuple: The volume produced by applying the computed affines to each slice and interpolating the result into a single ndarray. 
+            Each slice in this volume has the maximum shape in physical units of all slices per dimension, 
+            and at least the highest resolution of all slices per dimension. slices are stacked along dimension 0 of this volume. 
+            If either return_slice_resolution or return_affines is True then volume will be returned as the first element of a tuple 
+            whose other elements are the resolution of all of its slices and/or the affines used to align the slices, in that order, if requested.
+    """
 
     # Validate inputs.
     slices = list(slices)
     slice_ndim = np.array(slices[0]).ndim
     for slice_index, slice_ in enumerate(slices):
-        slices[slice_index] = _validate_ndarray(slice_, required_ndim=slice_ndim)
+        slices[slice_index] = _validate_ndarray(slice_, dtype=float, required_ndim=slice_ndim)
     try:
         slice_resolutions = list(slice_resolutions)
     except TypeError:
@@ -365,13 +399,17 @@ def rigidly_align_slices(
         slice_resolutions = np.tile(slice_resolutions, [len(slices), 1])
     slice_resolutions = _validate_ndarray(slice_resolutions, minimum_ndim=2, required_shape=(len(slices), slice_ndim))
     num_iterations = int(num_iterations)
-    num_iterations_per_registration = int(num_iterations_per_registration)
-    sigma_gaussian = float(sigma_gaussian)
-    clip_gaussian_at_z = float(clip_gaussian_at_z)
-    affine_stepsize = float(affine_stepsize)
+    if initial_affines is None:
+        initial_affines = np.repeat(np.eye(slice_ndim + 1)[None], len(slices), 0)
+    if isinstance(initial_affines, np.ndarray) and initial_affines.ndim == 2:
+        # A single affine was provided for initial_affines.
+        initial_affines = [initial_affines] * len(slices)
+    else:
+        initial_affines = list(initial_affines)
+    initial_affines = _validate_ndarray(initial_affines, required_shape=(len(slices), slice_ndim + 1, slice_ndim + 1))
 
-    # Initialize affines to identity.
-    affines = np.repeat(np.eye(slice_ndim + 1)[None], len(slices), 0)
+    # Initialize affines.
+    affines = initial_affines
 
     # Iteratively register slices.
     for iteration in range(num_iterations):
@@ -379,11 +417,11 @@ def rigidly_align_slices(
         # Resample slices into a volume
         # with the largest real shape per dimension of all slices,
         # and at least the finest resolution per dimension of all slices.
-        volume, volume_slice_resolutions = _slices_to_volume(slices, slice_resolutions, affines)
+        volume, volume_slice_resolution = _slices_to_volume(slices, slice_resolutions, affines)
 
         # Create a parallel volume whose slices are weighted averages of their neighbors in volume.
         volume_neighbors = _volume_to_neighbor_averages(volume, sigma_gaussian, clip_gaussian_at_z)
-        # Note: slices in volume_neighbors have the same resolutions as volume, i.e. volume_slice_resolutions.
+        # Note: slices in volume_neighbors have the same resolutions as volume, i.e. volume_slice_resolution.
 
         # Rigidly register each slice to its corresponding slice in volume_neighbors.
         for slice_index in range(len(slices)):
@@ -393,10 +431,10 @@ def rigidly_align_slices(
                 template=slices[slice_index],
                 target=volume_neighbors[slice_index],
                 template_resolution=slice_resolutions[slice_index],
-                target_resolution=volume_slice_resolutions[slice_index],
+                target_resolution=volume_slice_resolution,
                 num_iterations=num_iterations_per_registration,
                 affine_stepsize=affine_stepsize,
-                fixed_scale=fixed_scale,
+                fixed_affine_scale=fixed_affine_scale,
                 rigid=rigid,
                 initial_affine=affines[slice_index],
                 skip_gauss_newton=skip_gauss_newton,
@@ -405,5 +443,18 @@ def rigidly_align_slices(
             # Update affines with the computed affine.
             affines[slice_index] = affine
 
-    # Note: slices is a list of modified copies of the original input contents.
-    return slices
+    # Construct output.
+
+    volume, volume_slice_resolution = _slices_to_volume(slices, slice_resolutions, affines)
+
+    additional_outputs = []
+
+    if return_slice_resolution:
+        additional_outputs.append(volume_slice_resolution)
+    if return_affines:
+        additional_outputs.append(affines)
+    
+    if not return_slice_resolution and not return_affines:
+        return volume
+    else:
+        return (volume, *additional_outputs)

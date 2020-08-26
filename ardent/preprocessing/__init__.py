@@ -9,12 +9,10 @@ from .bias_and_artifact_correction import remove_grid_artifact
 from .modify_velocity_fields import locally_rotate_velocity_fields
 from .modify_velocity_fields import locally_translate_velocity_fields
 
-from .sliced_data import affine_register
 from .sliced_data import apply_affine_to_image
-from .sliced_data import rigidly_align_slices
+from .sliced_data import affine_register
+from .sliced_data import affine_align_slices_to_volume
 
-
-# TODO: update preprocessing_functions, include resample.
 preprocessing_functions = [
     # from .normalization:
     'cast_to_typed_array',
@@ -24,9 +22,13 @@ preprocessing_functions = [
     # from .bias_and_artifact_correction:
     'correct_bias_field',
     'remove_grid_artifact',
-    # from .initialization:
+    # from .modify_velocity_fields:
     'locally_rotate_velocity_fields',
     'locally_translate_velocity_fields',
+    # from .sliced_data:
+    'apply_affine_to_image',
+    'affine_register',
+    'affine_align_slices_to_volume',
     ]
 
 """
